@@ -1,4 +1,4 @@
-# VELOUR
+# Veytra
 
 A premium, minimal fashion storefront — Next.js (App Router) + TypeScript +
 React. No Tailwind, no icon libraries, no UI kits: the whole design system lives
