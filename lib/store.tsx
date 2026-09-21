@@ -23,7 +23,7 @@ export interface CartItem {
 export const FREE_SHIPPING_THRESHOLD = 75;
 export const SHIPPING_FLAT = 9.95;
 
-const STORAGE_KEY = "velour.cart.v1";
+const STORAGE_KEY = "veytra.cart.v1";
 
 interface CartContextValue {
   items: CartItem[];

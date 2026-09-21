@@ -18,7 +18,7 @@ export default function ContactPage() {
         <div>
           <h2 style={{ marginTop: 0 }}>Client care</h2>
           <p>
-            Email: care@velour.example
+            Email: care@veytra.example
             <br />
             Phone: +1 (555) 019-2847
             <br />
@@ -33,7 +33,7 @@ export default function ContactPage() {
             United Kingdom
           </p>
           <h2>Press</h2>
-          <p>press@velour.example</p>
+          <p>press@veytra.example</p>
         </div>
       </div>
     </div>

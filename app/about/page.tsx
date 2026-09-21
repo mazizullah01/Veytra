@@ -6,7 +6,7 @@ export default function AboutPage() {
       <span className="eyebrow">Our story</span>
       <h1>Considered clothing, made to last.</h1>
       <p>
-        VELOUR began with a simple frustration: the middle ground between
+        VEYTRA began with a simple frustration: the middle ground between
         fast-fashion and luxury had all but disappeared. We set out to build a
         wardrobe of quiet, well-made essentials — pieces you reach for daily and
         keep for years.

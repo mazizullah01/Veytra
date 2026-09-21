@@ -17,7 +17,7 @@ export default function Newsletter() {
   return (
     <section className="newsletter">
       <div className="container">
-        <span className="eyebrow eyebrow--light">The Velour List</span>
+        <span className="eyebrow eyebrow--light">The Veytra List</span>
         <h2>First access, quietly delivered.</h2>
         <p>
           Join for early previews, private sales and styling notes. No noise —

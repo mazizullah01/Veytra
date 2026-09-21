@@ -117,8 +117,8 @@ export default function Navbar() {
             <MenuIcon />
           </button>
 
-          <Link href="/" className="nav__brand" aria-label="VELOUR home">
-            VELOUR
+          <Link href="/" className="nav__brand" aria-label="VEYTRA home">
+            VEYTRA
           </Link>
 
           <div className="nav__actions">

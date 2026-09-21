@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ============================================================================
- *  VELOUR — listings import pipeline
+ *  VEYTRA — listings import pipeline
  * ============================================================================
  *
  * Reads  incoming/listings.csv  + photos from  incoming/images/

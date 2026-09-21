@@ -16,7 +16,7 @@ export default function LoginView() {
   return (
     <div className="auth">
       <div className="auth__card">
-        <p className="auth__brand">VELOUR</p>
+        <p className="auth__brand">VEYTRA</p>
         <p className="auth__intro">
           {tab === "signin"
             ? "Welcome back. Sign in to your account."
@@ -138,7 +138,7 @@ export default function LoginView() {
         <p className="auth__alt">
           {tab === "signin" ? (
             <>
-              New to VELOUR?{" "}
+              New to VEYTRA?{" "}
               <button type="button" onClick={() => setTab("signup")}>
                 Create an account
               </button>

@@ -29,7 +29,7 @@ export default function HeroSlideshow() {
         >
           <Img
             src={src}
-            alt="VELOUR collection"
+            alt="VEYTRA collection"
             fill
             sizes="100vw"
             priority={index === 0}

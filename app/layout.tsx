@@ -8,14 +8,14 @@ import { CartProvider } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: {
-    default: "VELOUR — Modern Essentials",
-    template: "%s · VELOUR",
+    default: "VEYTRA — Modern Essentials",
+    template: "%s · VEYTRA",
   },
   description:
-    "VELOUR is a premium minimal fashion label. Considered men's and women's essentials in lasting materials — designed to be worn for years.",
-  metadataBase: new URL("https://velour.example.com"),
+    "VEYTRA is a premium minimal fashion label. Considered men's and women's essentials in lasting materials — designed to be worn for years.",
+  metadataBase: new URL("https://veytra.example.com"),
   openGraph: {
-    title: "VELOUR — Modern Essentials",
+    title: "VEYTRA — Modern Essentials",
     description: "Premium minimal men's & women's apparel.",
     type: "website",
   },

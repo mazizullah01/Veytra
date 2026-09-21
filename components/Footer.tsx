@@ -53,7 +53,7 @@ export default function Footer() {
       <div className="container">
         <div className="footer__grid">
           <div>
-            <p className="footer__brand">VELOUR</p>
+            <p className="footer__brand">VEYTRA</p>
             <p className="footer__blurb">
               Considered, modern essentials cut from lasting materials. Designed
               in small collections, made to be worn for years — not seasons.
@@ -89,7 +89,7 @@ export default function Footer() {
         </div>
 
         <div className="footer__bottom">
-          <span>© {year} VELOUR. All rights reserved.</span>
+          <span>© {year} VEYTRA. All rights reserved.</span>
           <span>Designed for the modern wardrobe.</span>
         </div>
       </div>

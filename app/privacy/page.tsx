@@ -10,7 +10,7 @@ export default function PrivacyPage() {
       <p>
         This is a demonstration website. It does not operate a real store, does
         not process payments, and does not transmit any personal information to
-        a server. The policy below describes how a production VELOUR store would
+        a server. The policy below describes how a production VEYTRA store would
         handle your data.
       </p>
 
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
       <h2>Your rights</h2>
       <p>
         You may request access to, correction of, or deletion of your personal
-        data by contacting care@velour.example. We never sell your data.
+        data by contacting care@veytra.example. We never sell your data.
       </p>
 
       <h2>Cookies</h2>
