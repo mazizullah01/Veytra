@@ -815,7 +815,7 @@ h3 {
 }
 
 .hero__title {
-  font-size: clamp(3rem, 11vw, 8rem);
+  font-size: clamp(2.5rem, 9vw, 6.5rem);
   letter-spacing: 0.02em;
   margin: 1rem 0 0;
 }
