@@ -808,9 +808,10 @@ h3 {
 .hero__content {
   position: relative;
   z-index: 2;
-  text-align: center;
+  text-align: left;
   padding: var(--space-8) var(--gutter);
-  max-width: 960px;
+  width: 100%;
+  max-width: var(--container);
 }
 
 .hero__title {
@@ -838,7 +839,7 @@ h3 {
 }
 
 .hero__sub {
-  margin: 1.5rem auto 0;
+  margin: 1.5rem 0 0;
   max-width: 48ch;
   color: rgba(255, 255, 255, 0.84);
   font-size: clamp(1rem, 1.6vw, 1.15rem);
@@ -850,7 +851,7 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-4);
-  justify-content: center;
+  justify-content: flex-start;
   margin-top: 2.25rem;
   opacity: 0;
   animation: fade-up 1s var(--ease) 0.85s forwards;
