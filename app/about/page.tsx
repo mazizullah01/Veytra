@@ -3,7 +3,7 @@ export const metadata = { title: "About" };
 export default function AboutPage() {
   return (
     <div className="container prose">
-      <span className="eyebrow">Our story</span>
+      <span className="eyebrow">Our journey</span>
       <h1>Considered clothing, made to last.</h1>
       <p>
         VEYTRA began with a simple frustration: the middle ground between

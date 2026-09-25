@@ -35,13 +35,13 @@ npm run lint
 ```
 app/                         routes, layout, globals.css (the design system)
 components/                  shared + page-level components (server by default)
-  ├─ Navbar, Footer, Hero, HeroSlideshow, HeroContent
+  ├─ Navbar, Footer, Hero, HeroContent
   ├─ ProductCard, ProductGrid, ProductGallery, AddToCart, CategoryCard
   ├─ CartView, CheckoutView, LoginView, ContactForm    (client interactivity)
   ├─ Reveal (IntersectionObserver) · Toaster (toasts) · Img (onError fallback)
   └─ Icons (inline SVGs, no library)
 lib/
-  ├─ data.ts                 Product interface, BASE_PRODUCTS (24 demo), CATEGORIES,
+  ├─ data.ts                 Product interface, CATEGORIES,
   │                          PRODUCTS, subcategoriesFor()
   ├─ generated-products.ts   imported listings — regenerated, never hand-edited
   ├─ api.ts                  ***the backend-swap seam*** (async service layer)
@@ -81,34 +81,27 @@ and the detail page all consume the same types, so the contract is stable.
 
 ## Importing listings
 
-See [`incoming/README.md`](incoming/README.md). In short:
+The active catalogue comes from `app/assets/videos/listings.csv`, with photos
+from `app/assets/images/`. To regenerate it:
 
 ```bash
-cp incoming/listings-template.csv incoming/listings.csv
-# fill rows + drop photos into incoming/images/
 npm run import-listings
 ```
 
-The importer validates rows, skips invalid ones with reasons, optimizes images
-via macOS `sips` (max 1400px JPEG) into `public/images/products/`, uses a
-placeholder for missing files, and regenerates `lib/generated-products.ts`
-wholesale (idempotent).
+The importer preserves listing prices, descriptions, categories and flags, and
+writes optimized photos to `public/images/products/`. Exact CSV filenames are
+preferred; older PNG names fall back to `<product-slug>-1.jpg` and
+`<product-slug>-2.jpg`. Only imported products appear in the storefront.
 
-By default `PRODUCTS = BASE_PRODUCTS + GENERATED_PRODUCTS`. To show **only**
-imported listings, flip the single documented line in `lib/data.ts`.
+## Hero video
 
-## Adding a hero video
-
-Provide a video file, then transcode it to `public/videos/hero.mp4`
-(1080p H.264, no audio, faststart) and extract a poster frame to
-`public/images/hero-poster.jpg`. `components/Hero.tsx` detects the file at build
-time and automatically switches from the image slideshow fallback to the muted
-autoplay video hero. Example:
+The hero plays `public/videos/hero.mp4` on a muted autoplay loop, copied from
+`app/assets/videos/hero.mp4`. Its poster is extracted from the supplied video.
+To refresh these assets after replacing the source:
 
 ```bash
-ffmpeg -i source.mov -vf "scale=-2:1080" -c:v libx264 -profile:v high \
-  -an -movflags +faststart public/videos/hero.mp4
-ffmpeg -i source.mov -vf "scale=-2:1080" -frames:v 1 public/images/hero-poster.jpg
+cp app/assets/videos/hero.mp4 public/videos/hero.mp4
+ffmpeg -y -i app/assets/videos/hero.mp4 -frames:v 1 -update 1 public/images/hero-poster.jpg
 ```
 
 ## Design system

@@ -6,7 +6,6 @@ import ProductGrid from "@/components/ProductGrid";
 import Reveal from "@/components/Reveal";
 import AppLink from "@/components/AppLink";
 import { getFeatured, getNewArrivals, getTrending } from "@/lib/api";
-import { unsplash } from "@/lib/data";
 
 export default async function HomePage() {
   const [featured, newArrivals, trending] = await Promise.all([
@@ -40,14 +39,14 @@ export default async function HomePage() {
                 href="/women"
                 title="Women"
                 blurb="The women's edit"
-                image={unsplash("photo-1485968579580-b6d095142e6e", 1200)}
+                image="/images/products/oversized-wool-coat-1.jpg"
                 priority
               />
               <CategoryCard
                 href="/men"
                 title="Men"
                 blurb="The men's edit"
-                image={unsplash("photo-1539533018447-63fcce2678e3", 1200)}
+                image="/images/products/tailored-wool-overcoat-1.jpg"
                 priority
               />
             </div>
@@ -91,7 +90,7 @@ export default async function HomePage() {
               </div>
               <div className="promo__media">
                 <Img
-                  src={unsplash("photo-1525507119028-ed4c629a60a3", 1200)}
+                  src="/images/products/oversized-wool-coat-2.jpg"
                   alt="Winter sale selection"
                   fill
                   sizes="(max-width: 820px) 100vw, 45vw"
@@ -145,7 +144,7 @@ export default async function HomePage() {
             <div className="promo">
               <div className="promo__media">
                 <Img
-                  src={unsplash("photo-1490481651871-ab68de25d43d", 1200)}
+                  src="/images/products/unstructured-linen-blazer-2.jpg"
                   alt="Complimentary shipping"
                   fill
                   sizes="(max-width: 820px) 100vw, 45vw"

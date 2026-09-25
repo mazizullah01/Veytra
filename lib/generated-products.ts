@@ -3,10 +3,125 @@ import type { Product } from "./data";
 /**
  * AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
  *
- * Everything in this file is regenerated wholesale every time
- * `npm run import-listings` runs (see scripts/import-listings.mjs).
- *
- * The import script reads incoming/listings.csv + incoming/images/ and writes
- * the parsed products here. `lib/data.ts` merges this array into PRODUCTS.
+ * Regenerated in full by `npm run import-listings`
+ * (scripts/import-listings.mjs) from app/assets/videos/listings.csv + app/assets/images/.
+ * `lib/data.ts` uses this array as the complete catalogue.
  */
-export const GENERATED_PRODUCTS: Product[] = [];
+export const GENERATED_PRODUCTS: Product[] = [
+  {
+    id: "silk-slip-dress",
+    name: "Silk Slip Dress",
+    category: "women",
+    subcategory: "Dresses",
+    price: 189,
+    description: "Cut on the bias from washed silk, this slip falls with a fluid drape. Adjustable straps and a midi hem — day to evening without a second thought.",
+    sizes: ["XS","S","M","L","XL"],
+    images: ["/images/products/silk-slip-dress-1.jpg","/images/products/silk-slip-dress-2.jpg"],
+    featured: true,
+    trending: true,
+  },
+  {
+    id: "oversized-wool-coat",
+    name: "Oversized Wool Coat",
+    category: "women",
+    subcategory: "Outerwear",
+    price: 349,
+    compareAtPrice: 429,
+    description: "A generously cut overcoat in double-faced wool with dropped shoulders. Worn open or closed — the quiet anchor of a winter wardrobe.",
+    sizes: ["XS","S","M","L","XL"],
+    images: ["/images/products/oversized-wool-coat-1.jpg","/images/products/oversized-wool-coat-2.jpg"],
+    featured: true,
+    trending: true,
+  },
+  {
+    id: "cashmere-crewneck",
+    name: "Cashmere Crewneck",
+    category: "women",
+    subcategory: "Knitwear",
+    price: 148,
+    description: "Spun from a soft cashmere blend with a relaxed crew neckline. Slightly cropped body, ribbed trims, endlessly layerable.",
+    sizes: ["XS","S","M","L","XL"],
+    images: ["/images/products/cashmere-crewneck-1.jpg","/images/products/cashmere-crewneck-2.jpg"],
+    isNew: true,
+  },
+  {
+    id: "wide-leg-trousers",
+    name: "Wide-Leg Trousers",
+    category: "women",
+    subcategory: "Trousers",
+    price: 128,
+    description: "High-waisted with a clean pressed crease and a full, fluid leg. Tailoring that moves the way you do.",
+    sizes: ["XS","S","M","L","XL"],
+    images: ["/images/products/wide-leg-trousers-1.jpg","/images/products/wide-leg-trousers-2.jpg"],
+    trending: true,
+  },
+  {
+    id: "unstructured-linen-blazer",
+    name: "Unstructured Linen Blazer",
+    category: "women",
+    subcategory: "Blazers",
+    price: 168,
+    description: "An easy, unlined blazer in washed linen with soft shoulders and a relaxed body — throw it over anything.",
+    sizes: ["XS","S","M","L","XL"],
+    images: ["/images/products/unstructured-linen-blazer-1.jpg","/images/products/unstructured-linen-blazer-2.jpg"],
+    isNew: true,
+  },
+  {
+    id: "classic-oxford-shirt",
+    name: "Classic Oxford Shirt",
+    category: "men",
+    subcategory: "Shirts",
+    price: 89,
+    description: "A crisp button-down in breathable oxford cotton. Rolled sleeves or buttoned cuffs — it holds its shape either way.",
+    sizes: ["XS","S","M","L","XL"],
+    images: ["/images/products/classic-oxford-shirt-1.jpg","/images/products/classic-oxford-shirt-2.jpg"],
+    trending: true,
+  },
+  {
+    id: "tailored-wool-overcoat",
+    name: "Tailored Wool Overcoat",
+    category: "men",
+    subcategory: "Outerwear",
+    price: 329,
+    compareAtPrice: 399,
+    description: "Sharp shoulders, clean lines, double-faced wool. The coat that makes everything underneath look considered.",
+    sizes: ["XS","S","M","L","XL"],
+    images: ["/images/products/tailored-wool-overcoat-1.jpg","/images/products/tailored-wool-overcoat-2.jpg"],
+    featured: true,
+    trending: true,
+  },
+  {
+    id: "fisherman-knit-sweater",
+    name: "Fisherman Knit Sweater",
+    category: "men",
+    subcategory: "Knitwear",
+    price: 138,
+    description: "A heavyweight ribbed knit with a chunky cable texture. Warm without bulk, and better with every wear.",
+    sizes: ["XS","S","M","L","XL"],
+    images: ["/images/products/fisherman-knit-sweater-1.jpg","/images/products/fisherman-knit-sweater-2.jpg"],
+    isNew: true,
+  },
+  {
+    id: "essential-heavyweight-tee",
+    name: "Essential Heavyweight Tee",
+    category: "men",
+    subcategory: "T-Shirts",
+    price: 45,
+    description: "Dense combed cotton with a structured drape and a collar that keeps its shape. The white tee, done properly.",
+    sizes: ["XS","S","M","L","XL"],
+    images: ["/images/products/essential-heavyweight-tee-1.jpg","/images/products/essential-heavyweight-tee-2.jpg"],
+    featured: true,
+  },
+  {
+    id: "pleated-wide-leg-trousers",
+    name: "Pleated Wide-Leg Trousers",
+    category: "men",
+    subcategory: "Trousers",
+    price: 118,
+    description: "Double-pleated with a relaxed, full leg in a soft stone twill. Dress them up, dress them down — they don't mind.",
+    sizes: ["XS","S","M","L","XL"],
+    images: ["/images/products/pleated-wide-leg-trousers-1.jpg","/images/products/pleated-wide-leg-trousers-2.jpg"],
+    isNew: true,
+    trending: true,
+  },
+];

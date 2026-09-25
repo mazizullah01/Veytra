@@ -4,13 +4,13 @@
  *  VEYTRA — listings import pipeline
  * ============================================================================
  *
- * Reads  incoming/listings.csv  + photos from  incoming/images/
+ * Reads  app/assets/videos/listings.csv  + photos from  app/assets/images/
  * Writes public/images/products/<id>-1.jpg | <id>-2.jpg (optimized)
  * And regenerates  lib/generated-products.ts  wholesale.
  *
  * Usage:
- *   1. cp incoming/listings-template.csv incoming/listings.csv
- *   2. fill one row per product, drop photos into incoming/images/
+ *   1. Update app/assets/videos/listings.csv
+ *   2. Fill one row per product, drop photos into app/assets/images/
  *   3. npm run import-listings
  *
  * Dependency-free. Safe to re-run: output is fully regenerated each time.
@@ -31,8 +31,8 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 
-const CSV_PATH = path.join(ROOT, "incoming", "listings.csv");
-const IMAGES_SRC = path.join(ROOT, "incoming", "images");
+const CSV_PATH = path.join(ROOT, "app", "assets", "videos", "listings.csv");
+const IMAGES_SRC = path.join(ROOT, "app", "assets", "images");
 const IMAGES_OUT = path.join(ROOT, "public", "images", "products");
 const TS_OUT = path.join(ROOT, "lib", "generated-products.ts");
 
@@ -144,10 +144,15 @@ function optimizeImage(sourceName, outputBase) {
 
   // basename only — never allow path traversal from the CSV
   const safeName = path.basename(sourceName.trim());
-  const sourcePath = path.join(IMAGES_SRC, safeName);
+  // Supplied photos use product slugs and JPG extensions; the reference CSV
+  // retains some older PNG filenames. Prefer an exact match when available.
+  const exactPath = path.join(IMAGES_SRC, safeName);
+  const sourcePath = existsSync(exactPath)
+    ? exactPath
+    : path.join(IMAGES_SRC, `${path.basename(outputBase)}.jpg`);
 
   if (!existsSync(sourcePath)) {
-    warn(`image not found: incoming/images/${safeName} (using placeholder)`);
+    warn(`image not found: app/assets/images/${safeName} (using placeholder)`);
     return null;
   }
 
@@ -181,12 +186,12 @@ function optimizeImage(sourceName, outputBase) {
 function main() {
   if (!existsSync(CSV_PATH)) {
     log("");
-    log("No incoming/listings.csv found — nothing to import.");
+    log("No app/assets/videos/listings.csv found — nothing to import.");
     log("");
     log("To add products:");
-    log("  1. cp incoming/listings-template.csv incoming/listings.csv");
-    log("  2. Fill one row per product (see incoming/README.md).");
-    log("  3. Drop photos into incoming/images/.");
+    log("  1. Update app/assets/videos/listings.csv");
+    log("  2. Fill one row per product using the template columns.");
+    log("  3. Drop photos into app/assets/images/.");
     log("  4. npm run import-listings");
     log("");
     return;
@@ -342,8 +347,8 @@ function renderTs(products) {
  * AUTO-GENERATED FILE — DO NOT EDIT BY HAND.
  *
  * Regenerated in full by \`npm run import-listings\`
- * (scripts/import-listings.mjs) from incoming/listings.csv + incoming/images/.
- * \`lib/data.ts\` merges this array into PRODUCTS.
+ * (scripts/import-listings.mjs) from app/assets/videos/listings.csv + app/assets/images/.
+ * \`lib/data.ts\` uses this array as the complete catalogue.
  */
 export const GENERATED_PRODUCTS: Product[] = [
 ${entries}
