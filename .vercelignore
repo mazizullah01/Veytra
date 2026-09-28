@@ -1,0 +1,6 @@
+# Original import assets; the storefront uses generated files in public/.
+app/assets/
+incoming/
+scripts/
+AGENTS.md
+README.md
