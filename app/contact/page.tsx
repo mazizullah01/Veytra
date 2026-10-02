@@ -8,8 +8,8 @@ export default function ContactPage() {
       <span className="eyebrow">Get in touch</span>
       <h1>Contact</h1>
       <p>
-        Questions about an order, sizing or a fabric? Our client care team
-        replies within one business day.
+         Have a question about an order, sizing, or fabric? Our client care team
+        is here to help and typically replies within one business day.
       </p>
 
       <div className="contact-grid" style={{ marginTop: "2.5rem" }}>
