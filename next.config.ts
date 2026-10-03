@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
     // Remote images are served unoptimized-by-third-party but optimized by Next.
     // Only hosts declared here may be used with next/image.
     remotePatterns: [
+      { protocol: "https", hostname: new URL(process.env.NEXT_PUBLIC_INSFORGE_URL!).hostname },
       {
         protocol: "https",
         hostname: "images.unsplash.com",

@@ -1,37 +1,7 @@
-import {
-  PRODUCTS,
-  type Category,
-  type Product,
-} from "./data";
+import type { Category, Product } from "./data";
+import { insforge } from "./insforge";
 
-/**
- * ============================================================================
- *  lib/api.ts — THE BACKEND-SWAP SEAM
- * ============================================================================
- *
- * Every page and component reads catalogue data through the functions in this
- * module — never from `lib/data.ts` directly (except presentational helpers).
- *
- * Today each function resolves synchronously from the in-memory demo catalogue
- * behind an `await delay(...)`, which mimics real network latency and keeps the
- * call-sites async. To move to a real backend you ONLY need to change the
- * bodies below to `fetch(...)` calls — no page-level code changes required.
- *
- * Example future implementation:
- *
- *   export async function getProducts(params: ProductQuery = {}) {
- *     const qs = new URLSearchParams(
- *       Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]),
- *     );
- *     const res = await fetch(`${API_URL}/products?${qs}`, { next: { revalidate: 60 } });
- *     if (!res.ok) throw new Error("Failed to load products");
- *     return (await res.json()) as Product[];
- *   }
- *
- * All functions are typed and return Promises so swapping in fetch is a drop-in.
- * ============================================================================
- */
-
+/** Backend seam: keep page-facing signatures and map database names here. */
 export type SortKey = "featured" | "price-asc" | "price-desc" | "newest";
 
 export interface ProductQuery {
@@ -42,114 +12,51 @@ export interface ProductQuery {
   limit?: number;
 }
 
-/** Tiny artificial latency so the async seam is visible and honest. */
-const delay = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/** Safely coerce an untrusted URL value into a valid SortKey. */
+const columns = "id,name,category,subcategory,price,compare_at_price,description,sizes,images,featured,is_new,trending";
+interface ProductRow {
+  id: string; name: string; category: Category; subcategory: string;
+  price: number; compare_at_price: number | null; description: string;
+  sizes: string[]; images: string[]; featured: boolean; is_new: boolean; trending: boolean;
+}
+function product(row: ProductRow): Product {
+  return { id: row.id, name: row.name, category: row.category, subcategory: row.subcategory,
+    price: Number(row.price), compareAtPrice: row.compare_at_price == null ? undefined : Number(row.compare_at_price),
+    description: row.description, sizes: row.sizes, images: row.images,
+    featured: row.featured, isNew: row.is_new, trending: row.trending };
+}
 export function parseSort(value: unknown): SortKey {
-  return value === "price-asc" || value === "price-desc" || value === "newest"
-    ? value
-    : "featured";
+  return value === "price-asc" || value === "price-desc" || value === "newest" ? value : "featured";
 }
-
-function applySort(products: Product[], sort: SortKey = "featured"): Product[] {
-  const list = [...products];
-  switch (sort) {
-    case "price-asc":
-      return list.sort((a, b) => a.price - b.price);
-    case "price-desc":
-      return list.sort((a, b) => b.price - a.price);
-    case "newest":
-      return list.sort(
-        (a, b) => Number(Boolean(b.isNew)) - Number(Boolean(a.isNew)),
-      );
-    case "featured":
-    default:
-      return list.sort((a, b) => {
-        const featured = Number(Boolean(b.featured)) - Number(Boolean(a.featured));
-        if (featured !== 0) return featured;
-        const trend = Number(Boolean(b.trending)) - Number(Boolean(a.trending));
-        if (trend !== 0) return trend;
-        return a.name.localeCompare(b.name);
-      });
-  }
+async function catalogue(params: ProductQuery = {}, flag?: "featured" | "is_new" | "trending"): Promise<Product[]> {
+  let request = insforge.database.from("products").select(columns);
+  if (params.category) request = request.eq("category", params.category);
+  if (params.subcategory) request = request.eq("subcategory", params.subcategory);
+  if (flag) request = request.eq(flag, true);
+  if (params.sort === "price-asc" || params.sort === "price-desc")
+    request = request.order("price", { ascending: params.sort === "price-asc" });
+  else if (params.sort === "newest")
+    request = request.order("is_new", { ascending: false }).order("created_at", { ascending: false });
+  else request = request.order("featured", { ascending: false }).order("trending", { ascending: false }).order("name");
+  // Search retains the existing literal, case-insensitive substring behavior.
+  const q = params.query?.trim().toLowerCase();
+  const { data, error } = await request.limit(q ? 1000 : Math.max(0, Math.min(params.limit ?? 1000, 1000)));
+  if (error) throw error;
+  let list = (data as ProductRow[] ?? []).map(product);
+  if (q) list = list.filter(p => [p.name, p.category, p.subcategory, p.description].some(v => v.toLowerCase().includes(q)));
+  return typeof params.limit === "number" ? list.slice(0, Math.max(0, params.limit)) : list;
 }
-
-/** Normalise a free-text search term for loose matching. */
-const normalise = (value: string) => value.trim().toLowerCase();
-
-function matchesQuery(product: Product, query: string): boolean {
-  const q = normalise(query);
-  if (!q) return true;
-  return (
-    normalise(product.name).includes(q) ||
-    normalise(product.subcategory).includes(q) ||
-    normalise(product.category).includes(q) ||
-    normalise(product.description).includes(q)
-  );
-}
-
-/**
- * Query the catalogue. All params optional and combinable.
- * `sort` defaults to "featured", `limit` slices after sorting.
- */
-export async function getProducts(params: ProductQuery = {}): Promise<Product[]> {
-  await delay();
-  const { category, subcategory, sort = "featured", query, limit } = params;
-
-  let list = PRODUCTS.filter((product) => {
-    if (category && product.category !== category) return false;
-    if (subcategory && product.subcategory !== subcategory) return false;
-    if (query && !matchesQuery(product, query)) return false;
-    return true;
-  });
-
-  list = applySort(list, sort);
-  if (typeof limit === "number") list = list.slice(0, limit);
-  return list;
-}
-
-/** Fetch a single product by id, or null when it does not exist. */
+export async function getProducts(params: ProductQuery = {}): Promise<Product[]> { return catalogue(params); }
 export async function getProductById(id: string): Promise<Product | null> {
-  await delay();
-  return PRODUCTS.find((product) => product.id === id) ?? null;
+  const { data, error } = await insforge.database.from("products").select(columns).eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data ? product(data as ProductRow) : null;
 }
-
-/** Products flagged `featured`, newest-first within the flag. */
-export async function getFeatured(limit = 8): Promise<Product[]> {
-  return getProducts({ sort: "featured", limit }).then((list) =>
-    list.filter((p) => p.featured).slice(0, limit),
-  );
-}
-
-/** Products flagged `isNew`. */
-export async function getNewArrivals(limit = 8): Promise<Product[]> {
-  return getProducts({ sort: "newest", limit }).then((list) =>
-    list.filter((p) => p.isNew).slice(0, limit),
-  );
-}
-
-/** Products flagged `trending`. */
-export async function getTrending(limit = 8): Promise<Product[]> {
-  await delay();
-  return applySort(
-    PRODUCTS.filter((p) => p.trending),
-    "featured",
-  ).slice(0, limit);
-}
-
-/**
- * Related products: same category first, preferring the same subcategory,
- * excluding the current product.
- */
+export async function getFeatured(limit = 8): Promise<Product[]> { return catalogue({ limit }, "featured"); }
+export async function getNewArrivals(limit = 8): Promise<Product[]> { return catalogue({ sort: "newest", limit }, "is_new"); }
+export async function getTrending(limit = 8): Promise<Product[]> { return catalogue({ limit }, "trending"); }
 export async function getRelated(id: string, limit = 4): Promise<Product[]> {
-  await delay();
-  const current = PRODUCTS.find((p) => p.id === id);
+  const current = await getProductById(id);
   if (!current) return [];
-  const pool = PRODUCTS.filter(
-    (p) => p.id !== id && p.category === current.category,
-  );
-  const sameSub = pool.filter((p) => p.subcategory === current.subcategory);
-  const rest = pool.filter((p) => p.subcategory !== current.subcategory);
-  return [...sameSub, ...rest].slice(0, limit);
+  const pool = (await getProducts({ category: current.category })).filter(p => p.id !== id);
+  return [...pool.filter(p => p.subcategory === current.subcategory), ...pool.filter(p => p.subcategory !== current.subcategory)].slice(0, limit);
 }

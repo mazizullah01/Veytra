@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { PRODUCTS } from "@/lib/data";
+import type { Product } from "@/lib/data";
+import { getProducts } from "@/lib/api";
 import { money } from "@/lib/format";
-import { useCart } from "@/lib/store";
+import { useAuth, useCart } from "@/lib/store";
 import Img from "./Img";
 import {
   ArrowRightIcon,
@@ -27,11 +28,20 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { count, ready } = useCart();
+  const { user } = useAuth();
+  const [catalogue, setCatalogue] = useState<Product[]>([]);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    let active = true;
+    void getProducts().then(products => { if (active) setCatalogue(products); }).catch(() => { if (active) setCatalogue([]); });
+    return () => { active = false; };
+  }, [searchOpen]);
 
   // Lock body scroll while an overlay is open.
   useEffect(() => {
@@ -75,12 +85,12 @@ export default function Navbar() {
   const suggestions = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (q.length < 2) return [];
-    return PRODUCTS.filter((product) =>
+    return catalogue.filter((product) =>
       `${product.name} ${product.subcategory} ${product.category}`
         .toLowerCase()
         .includes(q),
     ).slice(0, 6);
-  }, [query]);
+  }, [query, catalogue]);
 
   const submitSearch = (event: FormEvent) => {
     event.preventDefault();
@@ -129,8 +139,9 @@ export default function Navbar() {
             >
               <SearchIcon />
             </button>
-            <Link href="/login" className="icon-btn" aria-label="Account">
+            <Link href={user ? "/profile" : `/login?next=${encodeURIComponent(pathname)}`} className="icon-btn" aria-label={user ? "Account (signed in)" : "Account"}>
               <UserIcon />
+              {user && <span className="nav__badge" aria-hidden>✓</span>}
             </Link>
             <Link href="/cart" className="icon-btn" aria-label="Cart">
               <BagIcon />
@@ -176,7 +187,7 @@ export default function Navbar() {
             <div className="drawer__foot">
               <Link href="/about">About</Link>
               <Link href="/contact">Contact</Link>
-              <Link href="/login">Sign in / Create account</Link>
+              <Link href={user ? "/profile" : "/login"}>{user ? "My account" : "Sign in / Create account"}</Link>
             </div>
           </div>
         </>

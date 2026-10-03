@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, useRef, type ChangeEvent, type FormEvent } from "react";
 import AppLink from "./AppLink";
-import { CheckIcon, ShieldIcon } from "./Icons";
+import { CheckIcon } from "./Icons";
 import { money } from "@/lib/format";
-import { useCart } from "@/lib/store";
+import { useAuth, useCart } from "@/lib/store";
+
+import { insforge, errorMessage } from "@/lib/insforge";
 
 interface FormState {
   name: string;
@@ -14,9 +16,6 @@ interface FormState {
   city: string;
   zip: string;
   country: string;
-  card: string;
-  expiry: string;
-  cvc: string;
 }
 
 const EMPTY: FormState = {
@@ -27,9 +26,6 @@ const EMPTY: FormState = {
   city: "",
   zip: "",
   country: "",
-  card: "",
-  expiry: "",
-  cvc: "",
 };
 
 type Errors = Partial<Record<keyof FormState, string>>;
@@ -44,10 +40,6 @@ function validate(form: FormState): Errors {
   if (!form.city.trim()) errors.city = "Required";
   if (!form.zip.trim()) errors.zip = "Required";
   if (!form.country.trim()) errors.country = "Required";
-  if (form.card.replace(/\s/g, "").length < 12)
-    errors.card = "Enter a valid (dummy) card number";
-  if (!/^\d{2}\s?\/\s?\d{2}$/.test(form.expiry)) errors.expiry = "MM/YY";
-  if (!/^\d{3,4}$/.test(form.cvc)) errors.cvc = "3–4 digits";
   return errors;
 }
 
@@ -60,10 +52,17 @@ function fieldError(errors: Errors, key: keyof FormState) {
 }
 
 export default function CheckoutView() {
-  const { items, ready, subtotal, shipping, total, clear } = useCart();
+  const { items, ready, subtotal, shipping, total, clear, flush } = useCart();
+  const { user, loading } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState("");
+  const [receipt, setReceipt] = useState<File | null>(null);
+  const [receiptLocked, setReceiptLocked] = useState(false);
+  const uploaded = useRef<{ url: string; key: string } | null>(null);
+  const orderId = useRef<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Errors>({});
-  const [order, setOrder] = useState<{ number: string; total: number } | null>(
+  const [order, setOrder] = useState<{ number: string; total: number; status: string } | null>(
     null,
   );
 
@@ -74,24 +73,54 @@ export default function CheckoutView() {
       setErrors((prev) => ({ ...prev, [key]: undefined }));
     };
 
-  const placeOrder = (event: FormEvent) => {
+  const placeOrder = async (event: FormEvent) => {
     event.preventDefault();
+    if (busy || !user) return;
     const found = validate(form);
     setErrors(found);
     if (Object.keys(found).length > 0) {
-      const firstKey = Object.keys(found)[0];
-      document.getElementById(`field-${firstKey}`)?.focus();
+      document.getElementById(`field-${Object.keys(found)[0]}`)?.focus();
       return;
     }
-    const number = `VLR-${Math.random()
-      .toString(36)
-      .slice(2, 8)
-      .toUpperCase()}`;
-    setOrder({ number, total });
-    clear();
+    setBusy(true); setFailure("");
+    try {
+      await flush();
+      orderId.current ??= crypto.randomUUID();
+      // An uncertain network response can be retried without placing a second order.
+      const existing = await insforge.database.from("orders").select("id,total,status").eq("id", orderId.current).maybeSingle();
+      if (existing.error) throw existing.error;
+      let saved = existing.data;
+      if (!saved) {
+        if (receipt && !uploaded.current) {
+          if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(receipt.type) || receipt.size > 10 * 1024 * 1024)
+            throw new Error("Choose a JPG, PNG, WebP or PDF receipt up to 10 MB.");
+          const extension = receipt.type === "application/pdf" ? "pdf" : receipt.type.split("/")[1];
+          const { data, error } = await insforge.storage.from("payment-uploads").upload(`${user.id}/${orderId.current}.${extension}`, receipt);
+          if (error) throw error;
+          if (!data) throw new Error("Receipt upload failed. Please retry.");
+          uploaded.current = { url: data.url, key: data.key };
+          setReceiptLocked(true);
+        }
+        const { data, error } = await insforge.database.from("orders").insert([{
+          id: orderId.current, user_id: user.id,
+          items: items.map(line => ({ id: line.id, name: line.name, size: line.size, qty: line.qty, price: line.price })),
+          subtotal, shipping, total, status: "pending",
+          contact: { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
+          shipping_address: { address: form.address.trim(), city: form.city.trim(), zip: form.zip.trim(), country: form.country },
+          payment_receipt_url: uploaded.current?.url ?? null,
+          payment_receipt_key: uploaded.current?.key ?? null,
+        }]).select("id,total,status").single();
+        if (error) throw error;
+        saved = data;
+      }
+      if (!saved) throw new Error("Order could not be confirmed. Please retry.");
+      setOrder({ number: saved.id, total: Number(saved.total), status: saved.status });
+      clear();
+    } catch (error) { setFailure(errorMessage(error)); }
+    finally { setBusy(false); }
   };
 
-  if (!ready) {
+  if (loading || (user && !ready)) {
     return (
       <div className="section container" style={{ paddingBlock: "6rem" }}>
         <div className="loader" />
@@ -106,13 +135,13 @@ export default function CheckoutView() {
           <CheckIcon size={30} />
         </span>
         <span className="eyebrow">Order confirmed</span>
-        <h1>Thank you — your order is on its way.</h1>
+        <h1>Thank you — your order has been received.</h1>
         <p className="confirmation__order">Order {order.number}</p>
         <p>
-          A confirmation has been sent to {form.email || "your inbox"}. This is a
-          demonstration store — no payment was taken and no order will be
-          dispatched.
+          Your order is awaiting payment review. Track its progress in your account.
         </p>
+        <p>Status: {order.status}</p>
+        <AppLink href="/profile" className="link-underline">View order history</AppLink>
         <p className="muted">Order total {money(order.total)}</p>
         <AppLink href="/women" className="btn btn--solid">
           <span>Continue shopping</span>
@@ -120,6 +149,12 @@ export default function CheckoutView() {
       </div>
     );
   }
+
+  if (!user) return <section className="container"><div className="empty-state">
+    <span className="eyebrow">Checkout</span><h1>Sign in to place your order</h1>
+    <p className="muted">Your shopping bag will be ready after you sign in.</p>
+    <AppLink href="/login?next=%2Fcheckout" className="btn btn--solid"><span>Sign in / Create account</span></AppLink>
+  </div></section>;
 
   if (items.length === 0) {
     return (
@@ -262,54 +297,13 @@ export default function CheckoutView() {
           </section>
 
           <section className="checkout-block">
-            <div className="checkout-block__head">
-              <h2>Payment</h2>
-              <span className="eyebrow" style={{ color: "var(--sale)" }}>
-                Dummy
-              </span>
-            </div>
-            <p className="dummy-note" style={{ marginBottom: "1.25rem" }}>
-              <ShieldIcon size={16} />
-              Demo only — do not enter real card details. No payment is processed.
-            </p>
-            <div className="stack">
-              <div className="field">
-                <label htmlFor="field-card">Card number *</label>
-                <input
-                  id="field-card"
-                  inputMode="numeric"
-                  placeholder="4242 4242 4242 4242"
-                  value={form.card}
-                  onChange={update("card")}
-                  aria-invalid={Boolean(errors.card)}
-                />
-                {fieldError(errors, "card")}
-              </div>
-              <div className="field-row">
-                <div className="field">
-                  <label htmlFor="field-expiry">Expiry *</label>
-                  <input
-                    id="field-expiry"
-                    placeholder="MM/YY"
-                    value={form.expiry}
-                    onChange={update("expiry")}
-                    aria-invalid={Boolean(errors.expiry)}
-                  />
-                  {fieldError(errors, "expiry")}
-                </div>
-                <div className="field">
-                  <label htmlFor="field-cvc">CVC *</label>
-                  <input
-                    id="field-cvc"
-                    inputMode="numeric"
-                    placeholder="123"
-                    value={form.cvc}
-                    onChange={update("cvc")}
-                    aria-invalid={Boolean(errors.cvc)}
-                  />
-                  {fieldError(errors, "cvc")}
-                </div>
-              </div>
+            <h2>Payment receipt</h2>
+            <p className="muted" style={{ marginBottom: "1.25rem" }}>Upload your payment receipt, if available. Your order starts as pending while payment is reviewed.</p>
+            <div className="field">
+              <label htmlFor="field-receipt">Receipt (optional)</label>
+              <input id="field-receipt" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={busy || receiptLocked}
+                onChange={event => { setReceipt(event.target.files?.[0] ?? null); setFailure(""); }} />
+              <small>JPG, PNG, WebP or PDF · up to 10 MB</small>
             </div>
           </section>
         </div>
@@ -341,11 +335,12 @@ export default function CheckoutView() {
             <span>Total</span>
             <span>{money(total)}</span>
           </div>
-          <button type="submit" className="btn btn--solid btn--block">
-            <span>Place Order</span>
+          {failure && <p className="field__error" role="alert">{failure}</p>}
+          <button type="submit" disabled={busy} className="btn btn--solid btn--block">
+            <span>{busy ? "Placing order…" : "Place Order"}</span>
           </button>
           <p className="summary__note">
-            By placing this order you agree to our terms. This is a demo store.
+            By placing this order you agree to our terms. Payment is reviewed before your order is processed.
           </p>
         </aside>
       </form>

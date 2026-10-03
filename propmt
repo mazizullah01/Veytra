@@ -1,0 +1,29 @@
+Set up the complete backend for this VELOUR fashion eCommerce site (Next.js + TypeScript, App Router) using the project's already-linked InsForge backend, and connect the existing frontend to it — replace the mocks, don't redesign anything.
+
+INSFORGE TOOLING:
+- The CLI is authenticated and the project is linked (`.insforge/project.json` exists; `npx @insforge/cli current` shows the project, API base URL and keys).
+- Use the InsForge CLI for infrastructure (tables, SQL, RLS policies, storage buckets) and the `@insforge/sdk` package in app code. Run `npx @insforge/cli docs <feature> typescript` (e.g. `docs auth`, `docs database`, `docs storage`) to get exact API usage — do NOT guess the SDK surface. The InsForge agent skills listed in AGENTS.md apply.
+- App code reads credentials from `.env.local` (NEXT_PUBLIC_ prefixed); never hardcode or commit keys. `.env.local` must stay git-ignored.
+
+BACKEND (via CLI):
+1. Database tables with row-level security:
+   - `products` — id (text slug, primary key), name, category ('women'|'men'), subcategory, price, compare_at_price (nullable), description, sizes (jsonb array), images (jsonb [primary, hover]), featured / is_new / trending (booleans), created_at. RLS: public read. Seed it with the products currently in `lib/generated-products.ts`.
+   - `carts` — user_id (references auth.users), product_id (references products), size, quantity, updated_at. RLS: users can only read/write their own rows (use auth.uid()).
+   - `orders` — id (uuid), user_id (references auth.users), items (jsonb snapshot: product id/name/size/qty/price each), subtotal, shipping, total, status (text: pending → paid → shipped → delivered, default 'pending'), contact (jsonb: name/email/phone), shipping_address (jsonb), payment_receipt_url (nullable), created_at. RLS: users can insert and read only their own orders.
+2. Auth: email + password signup/login via the SDK, session persisted client-side.
+3. Storage buckets: `product-images` (public) — upload the images from `public/images/products/` and update the products table so `images` point at the storage URLs; `payment-uploads` (private) for checkout payment receipts.
+
+FRONTEND (connect — same design, same UX):
+- `lib/insforge.ts` — single SDK client module, initialized from env vars.
+- `lib/api.ts` — replace the mock bodies with SDK queries against the products table, KEEPING the exact same exported function signatures (getProducts/getProductById/getFeatured/getNewArrivals/getTrending/getRelated). This file is the documented backend seam — pages must not change.
+- `/login` — turn the UI-only tabs into real signup/signin via the SDK (validation + error states). After login, redirect back to where the user came from or `/profile`. Navbar account icon reflects auth state (links to `/profile` when logged in, shows a signed-in indicator).
+- Cart (`lib/store.tsx`) — keep the existing API and localStorage behavior for guests; when a user is logged in, also sync cart lines to the `carts` table (load on login, write-through on changes).
+- `/checkout` — replace the dummy card fields with an order-summary + a payment-receipt upload (image or PDF). Place Order → upload the receipt to `payment-uploads` (if provided), insert the order row (with item price snapshots), clear the cart, and show the confirmation with the REAL order id and its initial `pending` status.
+- New `/profile` page — signed-in user's email, sign-out button, and order history: each order shows id, date, total, items, and a status tracker (pending → paid → shipped → delivered with the current state highlighted). Unauthenticated visitors get redirected to `/login`.
+- Order status updates happen in the InsForge dashboard/database (that's the "management" side) — the frontend only tracks and displays status.
+
+VERIFY (all required before finishing):
+- `npm run build` succeeds with no type errors.
+- Full end-to-end with a fresh test account on the production server: signup → login → products load from the database → add to cart → checkout with a receipt upload → order appears on `/profile` with pending status → sign out and confirm cart still works as guest.
+- Deployment env: set the NEXT_PUBLIC_ InsForge vars on the deployment (`npx @insforge/cli deployments env`), then redeploy (`npx @insforge/cli deployments deploy .`) and verify the live URL serves products from the database.
+- Keep code clean; the only files that should need changes are the ones listed above (plus the new client module and profile page).
