@@ -10,9 +10,8 @@ type LinkProps = Omit<ComponentProps<typeof Link>, "href"> & {
 };
 
 /**
- * Link wrapper that accepts arbitrary string hrefs (dynamic ids, query strings,
- * hash anchors). Next 16's typed routes otherwise require every href to be a
- * known static route; this centralises the single cast in one place.
+ * Link wrapper that accepts dynamic hrefs such as IDs, query strings,
+ * and hash anchors while keeping the Route cast centralized here.
  */
 export default function AppLink({ href, children, ...rest }: LinkProps) {
   return (
