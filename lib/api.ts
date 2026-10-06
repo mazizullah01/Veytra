@@ -1,4 +1,5 @@
 import type { Category, Product } from "./data";
+import { productImageSrc } from "./format";
 import { insforge } from "./insforge";
 
 /** Backend seam: keep page-facing signatures and map database names here. */
@@ -21,7 +22,7 @@ interface ProductRow {
 function product(row: ProductRow): Product {
   return { id: row.id, name: row.name, category: row.category, subcategory: row.subcategory,
     price: Number(row.price), compareAtPrice: row.compare_at_price == null ? undefined : Number(row.compare_at_price),
-    description: row.description, sizes: row.sizes, images: row.images,
+    description: row.description, sizes: row.sizes, images: row.images.map(productImageSrc),
     featured: row.featured, isNew: row.is_new, trending: row.trending };
 }
 export function parseSort(value: unknown): SortKey {

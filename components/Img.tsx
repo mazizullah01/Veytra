@@ -2,6 +2,7 @@
 
 import Image, { type ImageProps } from "next/image";
 import { useState } from "react";
+import { productImageSrc } from "@/lib/format";
 
 /** Neutral local placeholder used whenever a remote image fails to load. */
 export const FALLBACK_IMAGE = "/images/placeholder.jpg";
@@ -16,7 +17,7 @@ export default function Img({ src, alt, onError, ...props }: ImageProps) {
   return (
     <Image
       {...props}
-      src={failed ? FALLBACK_IMAGE : src}
+      src={failed ? FALLBACK_IMAGE : typeof src === "string" ? productImageSrc(src) : src}
       alt={alt}
       onError={(event) => {
         setFailed(true);
