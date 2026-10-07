@@ -2,7 +2,7 @@
 
 import { useState, useRef, type ChangeEvent, type FormEvent } from "react";
 import AppLink from "./AppLink";
-import { CheckIcon } from "./Icons";
+import { useRouter } from "next/navigation";
 import { money } from "@/lib/format";
 import { useAuth, useCart } from "@/lib/store";
 
@@ -56,16 +56,10 @@ export default function CheckoutView() {
   const { user, loading } = useAuth();
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
-  const [receipt, setReceipt] = useState<File | null>(null);
-  const [receiptLocked, setReceiptLocked] = useState(false);
-  const uploaded = useRef<{ url: string; key: string } | null>(null);
+  const router = useRouter();
   const orderId = useRef<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Errors>({});
-  const [order, setOrder] = useState<{ number: string; total: number; status: string } | null>(
-    null,
-  );
-
   const update =
     (key: keyof FormState) =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -91,31 +85,19 @@ export default function CheckoutView() {
       if (existing.error) throw existing.error;
       let saved = existing.data;
       if (!saved) {
-        if (receipt && !uploaded.current) {
-          if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(receipt.type) || receipt.size > 10 * 1024 * 1024)
-            throw new Error("Choose a JPG, PNG, WebP or PDF receipt up to 10 MB.");
-          const extension = receipt.type === "application/pdf" ? "pdf" : receipt.type.split("/")[1];
-          const { data, error } = await insforge.storage.from("payment-uploads").upload(`${user.id}/${orderId.current}.${extension}`, receipt);
-          if (error) throw error;
-          if (!data) throw new Error("Receipt upload failed. Please retry.");
-          uploaded.current = { url: data.url, key: data.key };
-          setReceiptLocked(true);
-        }
         const { data, error } = await insforge.database.from("orders").insert([{
           id: orderId.current, user_id: user.id,
           items: items.map(line => ({ id: line.id, name: line.name, size: line.size, qty: line.qty, price: line.price })),
-          subtotal, shipping, total, status: "pending",
+          subtotal, shipping, total, status: "pending", payment_status: "unpaid", payment_method: "stripe",
           contact: { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
           shipping_address: { address: form.address.trim(), city: form.city.trim(), zip: form.zip.trim(), country: form.country },
-          payment_receipt_url: uploaded.current?.url ?? null,
-          payment_receipt_key: uploaded.current?.key ?? null,
         }]).select("id,total,status").single();
         if (error) throw error;
         saved = data;
       }
       if (!saved) throw new Error("Order could not be confirmed. Please retry.");
-      setOrder({ number: saved.id, total: Number(saved.total), status: saved.status });
       clear();
+      router.push(`/payment/${saved.id}`);
     } catch (error) { setFailure(errorMessage(error)); }
     finally { setBusy(false); }
   };
@@ -124,28 +106,6 @@ export default function CheckoutView() {
     return (
       <div className="section container" style={{ paddingBlock: "6rem" }}>
         <div className="loader" />
-      </div>
-    );
-  }
-
-  if (order) {
-    return (
-      <div className="confirmation">
-        <span className="confirmation__mark">
-          <CheckIcon size={30} />
-        </span>
-        <span className="eyebrow">Order confirmed</span>
-        <h1>Thank you — your order has been received.</h1>
-        <p className="confirmation__order">Order {order.number}</p>
-        <p>
-          Your order is awaiting payment review. Track its progress in your account.
-        </p>
-        <p>Status: {order.status}</p>
-        <AppLink href="/profile" className="link-underline">View order history</AppLink>
-        <p className="muted">Order total {money(order.total)}</p>
-        <AppLink href="/women" className="btn btn--solid">
-          <span>Continue shopping</span>
-        </AppLink>
       </div>
     );
   }
@@ -296,16 +256,6 @@ export default function CheckoutView() {
             </div>
           </section>
 
-          <section className="checkout-block">
-            <h2>Payment receipt</h2>
-            <p className="muted" style={{ marginBottom: "1.25rem" }}>Upload your payment receipt, if available. Your order starts as pending while payment is reviewed.</p>
-            <div className="field">
-              <label htmlFor="field-receipt">Receipt (optional)</label>
-              <input id="field-receipt" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={busy || receiptLocked}
-                onChange={event => { setReceipt(event.target.files?.[0] ?? null); setFailure(""); }} />
-              <small>JPG, PNG, WebP or PDF · up to 10 MB</small>
-            </div>
-          </section>
         </div>
 
         <aside className="summary" aria-label="Order summary">
@@ -340,7 +290,7 @@ export default function CheckoutView() {
             <span>{busy ? "Placing order…" : "Place Order"}</span>
           </button>
           <p className="summary__note">
-            By placing this order you agree to our terms. Payment is reviewed before your order is processed.
+            By placing this order you agree to our terms. Continue to Stripe to complete your payment.
           </p>
         </aside>
       </form>

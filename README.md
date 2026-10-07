@@ -4,8 +4,8 @@ A premium, minimal fashion storefront — Next.js (App Router) + TypeScript +
 React. No Tailwind, no icon libraries, no UI kits: the whole design system lives
 in one documented global stylesheet.
 
-> Demo store. Cart and checkout are fully functional on the client (cart persists
-> in `localStorage`); payments, auth and emails are intentionally not wired up.
+> InsForge powers authentication, products, carts and orders. Stripe-hosted
+> Checkout runs in Sandbox mode; signed webhooks confirm payment.
 
 ## Getting started
 
@@ -26,8 +26,8 @@ npm run lint
 | `/search?q=…`   | Search results                                                              |
 | `/product/[id]` | Gallery, size selector, quantity, add to cart, related products             |
 | `/cart`         | Line items, quantity edit, order summary                                    |
-| `/checkout`     | Validated demo checkout → confirmation with a fake order number             |
-| `/login`        | Tabbed sign in / create account (UI only)                                   |
+| `/checkout`     | Authenticated checkout → pending order → Stripe payment             |
+| `/login`        | InsForge sign in / create account                                   |
 | `/about`, `/contact`, `/privacy` | Static content pages                                          |
 
 ## Structure
@@ -115,3 +115,55 @@ ffmpeg -y -i app/assets/videos/hero.mp4 -frames:v 1 -update 1 public/images/hero
   `prefers-reduced-motion`.
 - **Responsive** — mobile-first; grids collapse 4 → 3 → 2 → 1, nav switches to a
   slide-in drawer under 820px.
+
+## Backend and Stripe Sandbox payments
+
+InsForge powers authentication, products, carts, orders and `/profile`.
+Local SDK credentials are in `.env.local`; CLI credentials are in
+`.insforge/project.json`. Neither file should be committed.
+
+Checkout creates a pending/unpaid order with `payment_method = 'stripe'`, then
+opens `/payment/[orderId]`. The authenticated server endpoint creates a
+Stripe-hosted Checkout Session using the saved database total in USD. The
+return page retrieves the session server-side and displays its status; only a
+signed `checkout.session.completed` webhook confirms the order in the database.
+Customers cannot update payment or order status directly. Duplicate webhooks
+preserve later shipping/delivery states. Cancelling or declining payment leaves
+the order pending/unpaid; the profile provides a link to retry payment.
+
+Required server environment variables:
+
+- `STRIPE_SECRET_KEY`: a Sandbox `sk_test_…` key. Live keys are rejected.
+- `STRIPE_WEBHOOK_SECRET`: the signing secret for this app’s webhook endpoint.
+- `INSFORGE_API_KEY`: server-only admin key used for webhook/order-session writes.
+- `NEXT_PUBLIC_APP_URL`: the app origin, e.g. `https://b3ddvdt8.insforge.site`.
+  If `APP_URL` is already configured, it takes precedence.
+- Existing `NEXT_PUBLIC_INSFORGE_URL` and `NEXT_PUBLIC_INSFORGE_ANON_KEY`.
+
+`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` may hold a Sandbox `pk_test_…` key, but
+Stripe-hosted Checkout redirects do not require it. Never prefix secret or
+webhook keys with `NEXT_PUBLIC_`.
+
+Register a Stripe Sandbox webhook destination at
+`https://<app-origin>/api/stripe/webhook` for `checkout.session.completed` and
+put its signing secret into `STRIPE_WEBHOOK_SECRET`. Local testing can use
+`stripe listen --forward-to localhost:3100/api/stripe/webhook`, with the CLI’s
+signing secret. The deployed endpoint needs its own signing secret.
+
+Verify locally:
+
+```bash
+node --test tests/stripe.test.mjs
+npm run lint
+npm run build
+npm run start -- --port 3100
+```
+
+Full acceptance requires a verified test login and a real Sandbox Checkout:
+use card `4242 4242 4242 4242`, a future expiry, and any three-digit CVC.
+Check pending/unpaid/stripe in the database before payment, then confirmed/paid
+in the database and profile after the signed webhook. Check the payment in the
+Stripe Sandbox dashboard. Also cancel one Checkout and use declined card
+`4000 0000 0000 0002` for another; both orders must remain pending/unpaid.
+Unit tests exercise signed webhook security with mocked provider/database
+calls; they do not replace this full Sandbox acceptance run.
