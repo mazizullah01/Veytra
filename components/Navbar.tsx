@@ -24,12 +24,34 @@ const NAV_LINKS = [
   { href: "/men", label: "Men" },
 ] as const;
 
+/** Module-level cache so reopening search does not refetch the full catalogue. */
+let searchCatalogueCache: Product[] | null = null;
+let searchCataloguePending: Promise<Product[]> | null = null;
+
+function loadSearchCatalogue(): Promise<Product[]> {
+  if (searchCatalogueCache) return Promise.resolve(searchCatalogueCache);
+  if (!searchCataloguePending) {
+    searchCataloguePending = getProducts()
+      .then((products) => {
+        searchCatalogueCache = products;
+        return products;
+      })
+      .catch(() => {
+        searchCataloguePending = null;
+        return [] as Product[];
+      });
+  }
+  return searchCataloguePending;
+}
+
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { count, ready } = useCart();
   const { user } = useAuth();
-  const [catalogue, setCatalogue] = useState<Product[]>([]);
+  const [catalogue, setCatalogue] = useState<Product[]>(
+    () => searchCatalogueCache ?? [],
+  );
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -37,9 +59,11 @@ export default function Navbar() {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!searchOpen) return;
+    if (!searchOpen || searchCatalogueCache) return;
     let active = true;
-    void getProducts().then(products => { if (active) setCatalogue(products); }).catch(() => { if (active) setCatalogue([]); });
+    void loadSearchCatalogue().then((products) => {
+      if (active) setCatalogue(products);
+    });
     return () => { active = false; };
   }, [searchOpen]);
 

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Category, Product } from "./data";
 import { productImageSrc } from "./format";
 import { insforge } from "./insforge";
@@ -47,14 +48,15 @@ async function catalogue(params: ProductQuery = {}, flag?: "featured" | "is_new"
   return typeof params.limit === "number" ? list.slice(0, Math.max(0, params.limit)) : list;
 }
 export async function getProducts(params: ProductQuery = {}): Promise<Product[]> { return catalogue(params); }
-export async function getProductById(id: string): Promise<Product | null> {
+/** Request-scoped dedupe for PDP metadata + page (and related lookups). */
+export const getProductById = cache(async (id: string): Promise<Product | null> => {
   const { data, error } = await insforge.database.from("products").select(columns).eq("id", id).maybeSingle();
   if (error) throw error;
   return data ? product(data as ProductRow) : null;
-}
-export async function getFeatured(limit = 8): Promise<Product[]> { return catalogue({ limit }, "featured"); }
-export async function getNewArrivals(limit = 8): Promise<Product[]> { return catalogue({ sort: "newest", limit }, "is_new"); }
-export async function getTrending(limit = 8): Promise<Product[]> { return catalogue({ limit }, "trending"); }
+});
+export const getFeatured = cache(async (limit = 8): Promise<Product[]> => catalogue({ limit }, "featured"));
+export const getNewArrivals = cache(async (limit = 8): Promise<Product[]> => catalogue({ sort: "newest", limit }, "is_new"));
+export const getTrending = cache(async (limit = 8): Promise<Product[]> => catalogue({ limit }, "trending"));
 export async function getRelated(id: string, limit = 4): Promise<Product[]> {
   const current = await getProductById(id);
   if (!current) return [];

@@ -106,22 +106,36 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const { data: rows, error: cartError } = await insforge.database.from("carts")
           .select("product_id,size,quantity").eq("user_id", nextUser.id).limit(100);
         if (cartError) throw cartError;
+        const remoteRows = rows ?? [];
+        const remoteProducts = await Promise.all(
+          remoteRows.map((row) => getProductById(row.product_id)),
+        );
         const remote: CartItem[] = [];
-        for (const row of rows ?? []) {
-          const product = await getProductById(row.product_id);
-          if (product) remote.push({ id: product.id, name: product.name, price: product.price,
-            image: product.images[0], size: row.size, qty: row.quantity });
-        }
+        remoteRows.forEach((row, index) => {
+          const product = remoteProducts[index];
+          if (product) {
+            remote.push({
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              image: product.images[0],
+              size: row.size,
+              qty: row.quantity,
+            });
+          }
+        });
         if (!active || version !== generation.current) return;
         baseline.current = remote;
         const merged = remote.map(line => ({ ...line }));
-        for (const guest of readStorage()) {
-          const product = await getProductById(guest.id);
-          if (!product || !product.sizes.includes(guest.size)) continue;
+        const guests = readStorage();
+        const guestProducts = await Promise.all(guests.map((guest) => getProductById(guest.id)));
+        guests.forEach((guest, index) => {
+          const product = guestProducts[index];
+          if (!product || !product.sizes.includes(guest.size)) return;
           const line = merged.find(line => line.id === guest.id && line.size === guest.size);
           if (line) line.qty = Math.min(99, line.qty + guest.qty);
           else merged.push({ ...guest, name: product.name, price: product.price, image: product.images[0], qty: Math.min(99, guest.qty) });
-        }
+        });
         if (!active || version !== generation.current) return;
         setItems(merged);
         setReady(true);
@@ -232,7 +246,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
   }, [items, ready, add, remove, updateQty, clear, flush]);
 
-  return <AuthContext.Provider value={{ user, loading }}>
+  const authValue = useMemo<AuthContextValue>(
+    () => ({ user, loading }),
+    [user, loading],
+  );
+
+  return <AuthContext.Provider value={authValue}>
     <CartContext.Provider value={value}>
       {syncError && <p className="field__error" role="alert" style={{ padding: "1rem" }}>Cart could not sync: {syncError}. <button onClick={() => { if (!ready) window.location.reload();
         else void flush().catch(error => setSyncError(errorMessage(error))); }}>Retry</button></p>}
