@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { money } from "@/lib/format";
 import { useAuth, useCart } from "@/lib/store";
 
-import { insforge, errorMessage } from "@/lib/insforge";
+import { errorMessage } from "@/lib/insforge";
+import { insforge } from "@/lib/insforge-client";
 
 interface FormState {
   name: string;

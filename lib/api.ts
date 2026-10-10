@@ -1,7 +1,7 @@
 import { cache } from "react";
 import type { Category, Product } from "./data";
 import { productImageSrc } from "./format";
-import { insforge } from "./insforge";
+import { publicInsforge as insforge } from "./insforge";
 
 /** Backend seam: keep page-facing signatures and map database names here. */
 export type SortKey = "featured" | "price-asc" | "price-desc" | "newest";

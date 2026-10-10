@@ -11,7 +11,8 @@ import {
   type ReactNode,
 } from "react";
 
-import { insforge, errorMessage, type StoreUser } from "./insforge";
+import { errorMessage, type StoreUser } from "./insforge";
+import { insforge, restoreSession } from "./insforge-client";
 import { getProductById } from "./api";
 
 /** A line item in the cart. We snapshot just what the UI needs. */
@@ -89,9 +90,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const load = async () => {
       const version = ++generation.current;
       setReady(false);
-      const { data, error } = await insforge.auth.getCurrentUser();
+      const nextUser = await restoreSession();
       if (!active || version !== generation.current) return;
-      const nextUser = error ? null : data.user;
       setUser(nextUser);
       setLoading(false);
       owner.current = nextUser?.id ?? null;
@@ -144,10 +144,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
     };
     void load();
-    const unsubscribe = insforge.auth.onAuthStateChange(event => {
-      if (event !== "tokenRefreshed") void load();
-    });
-    return () => { active = false; unsubscribe(); };
+    return () => { active = false; };
   }, []);
 
   const sync = useCallback(async (snapshot: CartItem[], userId: string) => {

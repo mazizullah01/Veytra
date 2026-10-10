@@ -3,12 +3,17 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppLink from "./AppLink";
 import { useAuth } from "@/lib/store";
-import { insforge, errorMessage } from "@/lib/insforge";
+import { errorMessage } from "@/lib/insforge";
+import { insforge, restoreSession } from "@/lib/insforge-client";
 import { money } from "@/lib/format";
 
 interface Order { id: string; total: number; status: string; payment_status: string }
 export async function paymentRequest(path: string, options: RequestInit = {}) {
-  const token = await insforge.getHttpClient().getValidAccessToken();
+  let token = await insforge.getHttpClient().getValidAccessToken();
+  if (!token) {
+    await restoreSession();
+    token = await insforge.getHttpClient().getValidAccessToken();
+  }
   if (!token) throw new Error("Please sign in to continue.");
   const response = await fetch(path, { ...options, headers: { "Content-Type": "application/json", ...options.headers, Authorization: `Bearer ${token}` }, cache: "no-store" });
   const data = await response.json();

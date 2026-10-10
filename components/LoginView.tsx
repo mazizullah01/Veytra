@@ -1,16 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-
-import { useRouter } from "next/navigation";
-import type { Route } from "next";
-import { insforge, errorMessage } from "@/lib/insforge";
+import { authRequest } from "@/lib/insforge-client";
 
 type Tab = "signin" | "signup";
 
 export default function LoginView() {
   const [tab, setTab] = useState<Tab>("signin");
-  const router = useRouter();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState("");
@@ -29,41 +25,65 @@ export default function LoginView() {
     if (enteredPassword.length < 8) { setMessage("Use a password with at least 8 characters."); return; }
     setBusy(true); setMessage("");
     try {
-      const result = tab === "signup"
-        ? await insforge.auth.signUp({ email, password: enteredPassword, name: String(fields.get("name") ?? "").trim(), redirectTo: window.location.origin + "/login" })
-        : await insforge.auth.signInWithPassword({ email, password: enteredPassword });
-      if (result.error) {
-        if (result.error.statusCode === 403) {
+      if (tab === "signup") {
+        const result = await authRequest<{
+          user: unknown;
+          requireEmailVerification?: boolean;
+        }>("/api/auth/sign-up", {
+          email,
+          password: enteredPassword,
+          name: String(fields.get("name") ?? "").trim(),
+          redirectTo: window.location.origin + "/login",
+        });
+        if (result.requireEmailVerification) {
           setVerificationEmail(email); setPassword(enteredPassword);
-          setMessage("Verify your email to sign in. You can resend your verification code below.");
+          setMessage("Check your email for the verification code or link.");
           return;
         }
-        throw result.error;
+      } else {
+        await authRequest("/api/auth/sign-in", { email, password: enteredPassword });
       }
-      if (result.data && "requireEmailVerification" in result.data && result.data.requireEmailVerification) {
+      window.location.assign(destination());
+    } catch (error) {
+      const statusCode = error && typeof error === "object" && "statusCode" in error
+        ? Number((error as { statusCode: number }).statusCode)
+        : 0;
+      if (statusCode === 403) {
         setVerificationEmail(email); setPassword(enteredPassword);
-        setMessage("Check your email for the verification code or link.");
+        setMessage("Verify your email to sign in. You can resend your verification code below.");
         return;
       }
-      router.replace(destination() as Route); router.refresh();
-    } catch (error) { setMessage(errorMessage(error)); }
-    finally { setBusy(false); }
+      setMessage(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   };
   const verify = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setMessage("");
     try {
-      const { error } = await insforge.auth.verifyEmail({ email: verificationEmail, otp: code });
-      if (error) throw error;
-      const signedIn = await insforge.auth.signInWithPassword({ email: verificationEmail, password });
-      if (signedIn.error) throw signedIn.error;
-      router.replace(destination() as Route); router.refresh();
-    } catch (error) { setMessage(errorMessage(error)); }
-    finally { setBusy(false); }
+      await authRequest("/api/auth/verify-email", { email: verificationEmail, otp: code });
+      await authRequest("/api/auth/sign-in", { email: verificationEmail, password });
+      window.location.assign(destination());
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   };
   const resend = async () => {
     setBusy(true);
-    const { error } = await insforge.auth.resendVerificationEmail({ email: verificationEmail, redirectTo: window.location.origin + "/login" });
-    setMessage(error ? errorMessage(error) : "Verification email sent."); setBusy(false);
+    try {
+      await authRequest(
+        "/api/auth/verify-email",
+        { email: verificationEmail, redirectTo: window.location.origin + "/login" },
+        "PUT",
+      );
+      setMessage("Verification email sent.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not resend code.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

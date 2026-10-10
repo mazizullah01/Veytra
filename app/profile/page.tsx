@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppLink from "@/components/AppLink";
 import { useAuth, useCart } from "@/lib/store";
-import { insforge, errorMessage } from "@/lib/insforge";
+import { errorMessage } from "@/lib/insforge";
+import { authRequest, insforge } from "@/lib/insforge-client";
 import { money } from "@/lib/format";
 
 const stages = ["pending", "confirmed", "shipped", "delivered"];
@@ -38,9 +39,15 @@ export default function ProfilePage() {
   const signOut = async () => {
     setBusy(true);
     try { await flush(); } catch (error) { setError(errorMessage(error)); setBusy(false); return; }
-    const { error } = await insforge.auth.signOut();
-    if (error) { setError(errorMessage(error)); setBusy(false); }
-    else { router.replace("/"); router.refresh(); }
+    try {
+      await authRequest("/api/auth/sign-out");
+      // Full reload clears client auth state after httpOnly cookies are cleared.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- intentional hard navigation after sign-out
+      window.location.assign("/");
+    } catch (signOutError) {
+      setError(errorMessage(signOutError));
+      setBusy(false);
+    }
   };
   if (loading || !user) return <div className="section container" style={{ paddingBlock: "6rem" }}><div className="loader" /></div>;
   return <div className="container section">
