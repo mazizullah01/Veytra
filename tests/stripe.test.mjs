@@ -11,7 +11,7 @@ import Stripe from 'stripe';
 const moduleRequire = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const orderId = '12345678-1234-1234-1234-123456789abc';
-let order, writes, calls, user, session, createdParams;
+let order, writes, calls, user, session, createdParams, failWrite;
 const stripe = new Stripe('sk_test_unit_tests_only');
 const signedSecret = 'whsec_unit_tests_only';
 const cache = {};
@@ -24,6 +24,7 @@ function database() {
       eq(key, value) { filters.push([key, value]); return query; },
       is(key, value) { filters.push([key, value]); return query; },
       async maybeSingle() {
+        if (changes && failWrite) return { data: null, error: { message: 'constraint violation' } };
         if (!order || filters.some(([key, value]) => order[key] !== value)) return { data: null, error: null };
         if (changes) { writes++; Object.assign(order, changes); }
         return { data: { ...order }, error: null };
@@ -69,7 +70,7 @@ beforeEach(() => {
   user = { id: 'owner', email: 'test@example.invalid' };
   order = { id: orderId, user_id: 'owner', total: '49.99', status: 'pending', payment_status: 'unpaid', payment_method: 'stripe', stripe_session_id: 'cs_test_example' };
   session = { id: 'cs_test_example', livemode: false, mode: 'payment', payment_status: 'paid', status: 'complete', metadata: { orderId, userId: 'owner' }, client_reference_id: orderId, currency: 'usd', amount_total: 4999 };
-  writes = 0; calls = 0; createdParams = null;
+  writes = 0; calls = 0; createdParams = null; failWrite = false;
 });
 function webhookRequest(overrides = {}, signatureValid = true, type = 'checkout.session.completed') {
   const payload = JSON.stringify({ id: 'evt_test', type, livemode: false, data: { object: { ...session, ...overrides } } });
@@ -124,10 +125,24 @@ test('paid order rejects further checkout', async () => {
   order.payment_status = 'paid'; order.status = 'confirmed';
   assert.equal((await checkout.POST(checkoutRequest())).status, 409); assert.equal(calls, 0);
 });
-test('return status is authenticated, read-only and waits for webhook', async () => {
+test('return status is authenticated and confirms paid Stripe sessions', async () => {
   const url = 'http://localhost/api/stripe/payment-status?session_id=cs_test_example';
   assert.equal((await status.GET(new Request(url))).status, 401); assert.equal(calls, 0);
   const response = await status.GET(new Request(url, { headers: { Authorization: 'Bearer unit_test_token' } }));
   const result = await response.json();
-  assert.equal(result.stripePaid, true); assert.equal(result.paymentStatus, 'unpaid'); assert.equal(result.status, 'pending'); assert.equal(writes, 0);
+  assert.equal(result.stripePaid, true);
+  assert.equal(result.paymentStatus, 'paid');
+  assert.equal(result.status, 'confirmed');
+  assert.equal(writes, 1);
+});
+test('confirmation DB failure returns a clear payment error', async () => {
+  failWrite = true;
+  const response = await status.GET(new Request(
+    'http://localhost/api/stripe/payment-status?session_id=cs_test_example',
+    { headers: { Authorization: 'Bearer unit_test_token' } },
+  ));
+  assert.equal(response.status, 502);
+  assert.equal((await response.json()).error, 'Unable to confirm your order.');
+  assert.equal(writes, 0);
+  assert.equal(order.payment_status, 'unpaid');
 });

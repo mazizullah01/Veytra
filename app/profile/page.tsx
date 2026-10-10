@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppLink from "@/components/AppLink";
+import OrderStatusTracker from "@/components/OrderStatusTracker";
 import { useAuth, useCart } from "@/lib/store";
 import { errorMessage } from "@/lib/insforge";
 import { authRequest, insforge } from "@/lib/insforge-client";
 import { money } from "@/lib/format";
 
-const stages = ["pending", "confirmed", "shipped", "delivered"];
 interface Order {
   id: string; created_at: string; total: number; status: string; payment_status: string;
   items: { id: string; name: string; size: string; qty: number; price: number }[];
@@ -65,9 +65,7 @@ export default function ProfilePage() {
           <p><span style={{ display: "inline-block", padding: "0.35rem 0.75rem", border: "1px solid var(--line, #ddd)" }}>{order.payment_status === "paid" ? "Paid" : "Unpaid"}</span></p>
           {order.payment_status !== "paid" && <AppLink href={`/payment/${order.id}`} className="link-underline">Continue to payment</AppLink>}
           {order.items.map((item, index) => <div className="summary__row" key={`${item.id}-${item.size}-${index}`}><span>{item.name} · Size {item.size} × {item.qty}</span><span>{money(Number(item.price) * item.qty)}</span></div>)}
-          <ol aria-label={`Status: ${order.status}`} style={{ display: "flex", gap: "1rem", flexWrap: "wrap", listStyle: "none", padding: 0, marginTop: "1.5rem" }}>
-            {stages.map((stage, index) => <li key={stage} aria-current={stage === order.status ? "step" : undefined} style={{ padding: "0.6rem 1rem", border: "1px solid var(--line, #ddd)", background: stage === order.status ? "var(--ink, #222)" : "transparent", color: stage === order.status ? "var(--paper, #fff)" : "inherit", opacity: index > stages.indexOf(order.status) ? 0.5 : 1, textTransform: "capitalize" }}>{stage}</li>)}
-          </ol>
+          <OrderStatusTracker status={order.status} />
         </article>)}
     </section>
   </div>;

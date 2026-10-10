@@ -1674,6 +1674,67 @@ h3 {
   margin-top: 2rem;
 }
 
+.order-tracker {
+  display: flex;
+  align-items: flex-start;
+  list-style: none;
+  padding: 0;
+  margin: 1.75rem 0 0;
+  width: 100%;
+}
+
+.order-tracker__step {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+}
+
+.order-tracker__step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: calc(50% + 8px);
+  right: calc(-50% + 8px);
+  height: 2px;
+  background: var(--line);
+}
+
+.order-tracker__step.is-done:not(:last-child)::after {
+  background: var(--ink);
+}
+
+.order-tracker__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  background: var(--paper, #fff);
+  z-index: 1;
+}
+
+.order-tracker__step.is-done .order-tracker__dot,
+.order-tracker__step.is-current .order-tracker__dot {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.order-tracker__label {
+  margin-top: 0.65rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.order-tracker__step.is-done .order-tracker__label,
+.order-tracker__step.is-current .order-tracker__label {
+  color: var(--ink);
+}
+
 /* SECTION: Newsletter & promo -------------------------------------------- */
 .newsletter {
   background: var(--ink);

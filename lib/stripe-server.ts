@@ -54,6 +54,51 @@ export function verifySession(session: Stripe.Checkout.Session, order: PaymentOr
   if (session.livemode || session.mode !== "payment" || session.metadata?.orderId !== order.id || session.client_reference_id !== order.id || session.metadata?.userId !== order.user_id || session.currency !== "usd" || session.amount_total !== usdCents(order.total) || order.payment_method !== "stripe" || order.stripe_session_id !== session.id)
     throw new PaymentError("Payment session does not match this order.", 409);
 }
+
+/**
+ * Confirm an order after Stripe reports the Checkout Session as paid.
+ * Used by the webhook and as a verified fallback on the payment-status route
+ * when the webhook is delayed or misconfigured. Never trusts the browser alone.
+ */
+export async function confirmPaidOrder(
+  session: Stripe.Checkout.Session,
+  order: PaymentOrder,
+): Promise<PaymentOrder> {
+  verifySession(session, order);
+  if (session.payment_status !== "paid") return order;
+  if (order.payment_status === "paid") return order;
+
+  const admin = adminClient();
+  const updated = await admin.database
+    .from("orders")
+    .update({ payment_status: "paid", status: "confirmed" })
+    .eq("id", order.id)
+    .eq("stripe_session_id", session.id)
+    .eq("payment_status", "unpaid")
+    .eq("status", "pending")
+    .select(orderColumns)
+    .maybeSingle();
+  if (updated.error) {
+    console.error("Order confirmation update failed", updated.error);
+    throw new PaymentError("Unable to confirm your order.", 502);
+  }
+  if (updated.data) return updated.data as PaymentOrder;
+
+  const latest = await admin.database
+    .from("orders")
+    .select(orderColumns)
+    .eq("id", order.id)
+    .single();
+  if (latest.error) {
+    console.error("Order confirmation re-read failed", latest.error);
+    throw new PaymentError("Unable to confirm your order.", 502);
+  }
+  if (!latest.data || latest.data.payment_status !== "paid") {
+    throw new PaymentError("Order confirmation failed.", 409);
+  }
+  return latest.data as PaymentOrder;
+}
+
 export function paymentFailure(error: unknown) {
   if (error instanceof PaymentError) return Response.json({ error: error.message }, { status: error.status });
   console.error("Stripe payment request failed", error instanceof Error ? error.name : "Unknown error");
