@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import { ToastProvider } from "@/components/Toaster";
 import { CartProvider } from "@/lib/store";
+import StyleAssistant from "@/components/style-assistant/StyleAssistant";
 
 export const metadata: Metadata = {
   title: {
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Navbar />
             <main>{children}</main>
             <Footer />
+            <StyleAssistant />
           </ToastProvider>
         </CartProvider>
       </body>

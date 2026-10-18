@@ -1,0 +1,30 @@
+I have added GEMINI_API_KEY to my existing .env.local file and installed @google/genai.
+
+I have also created app/api/chat/route.ts for the Gemini fashion assistant.
+
+Now finish integrating the complete chatbot into my existing Veytra website.
+
+First inspect my actual project structure and existing components.
+
+Requirements:
+
+1. Reuse my existing app/api/chat/route.ts and improve it where needed.
+2. Create a modern, floating "Veytra AI Fashion Stylist" chatbot.
+3. Add the chatbot component to my existing root layout so it appears on every page.
+4. Support natural, open-ended conversations about any fashion or styling topic, not just my products.
+5. Support multi-turn conversation history so customers can ask follow-up questions.
+6. Support English, Urdu, and Roman Urdu.
+7. Add quick suggestion buttons for outfits, color combinations, sizing, casual looks and wedding styling.
+8. Connect to my existing InsForge products so the assistant can recommend real Veytra products when relevant.
+9. Do not restrict styling advice to products available in my store.
+10. Use Gemini's free tier only and do not enable billing or use paid-only models.
+11. Keep API keys and InsForge credentials secure.
+12. Add per-user/IP rate limiting, message validation, bounded conversation context, and graceful quota error handling.
+13. Protect private customer and order information. Do not send personal data to Gemini unnecessarily.
+14. Make the design match my existing Veytra website.
+15. Do not modify Stripe, checkout, or existing authentication functionality.
+16. Check TypeScript errors and run a production build.
+
+Implement the feature end-to-end rather than generating mockup code.
+
+At the end, tell me what files were created or modified and how to test the chatbot.

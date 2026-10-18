@@ -63,3 +63,43 @@ export async function getRelated(id: string, limit = 4): Promise<Product[]> {
   const pool = (await getProducts({ category: current.category })).filter(p => p.id !== id);
   return [...pool.filter(p => p.subcategory === current.subcategory), ...pool.filter(p => p.subcategory !== current.subcategory)].slice(0, limit);
 }
+
+/** Bounded, filtered catalog reads for the rule-based assistant. Uses the same
+ * public client, product projection and row mapper as the rest of the store. */
+export interface AssistantProductQuery {
+  category?: Category;
+  subcategories?: string[];
+  size?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  maxExclusive?: boolean;
+  terms?: string[];
+  anyTerms?: string[];
+  limit?: number;
+}
+export async function getAssistantProducts(params: AssistantProductQuery, signal?: AbortSignal): Promise<Product[]> {
+  let request = insforge.database.from("products").select(columns);
+  if (params.category) request = request.eq("category", params.category);
+  if (params.subcategories?.length) request = request.in("subcategory", params.subcategories);
+  // sizes is JSONB, not a PostgreSQL text[]: array-style contains emits {M},
+  // whereas the JSONB containment operator requires the JSON literal ["M"].
+  if (params.size) request = request.filter("sizes", "cs", JSON.stringify([params.size]));
+  if (params.minPrice !== undefined) request = request.gte("price", params.minPrice);
+  if (params.maxPrice !== undefined) request = params.maxExclusive ? request.lt("price", params.maxPrice) : request.lte("price", params.maxPrice);
+  const textFilter = (terms: string[]) => terms.slice(0, 8).flatMap(term => {
+    const safe = term.replace(/[^\p{L}\p{N} -]/gu, "").slice(0, 30).trim();
+    return safe ? [`name.ilike.%${safe}%`, `description.ilike.%${safe}%`, `subcategory.ilike.%${safe}%`] : [];
+  }).join(",");
+  const groups = (params.terms ?? []).slice(0, 3).map(term => textFilter([term])).filter(Boolean);
+  const any = textFilter(params.anyTerms ?? []);
+  if (any) groups.push(any);
+  // A single nested expression avoids duplicate `or` URL parameters, which the
+  // backend rejects. Each search term must match at least one public text field.
+  if (groups.length === 1) request = request.or(groups[0]);
+  else if (groups.length > 1) request = request.or(`and(${groups.map(group => `or(${group})`).join(",")})`);
+  if (signal) request = request.abortSignal(signal);
+  const { data, error } = await request.order("price", { ascending: true }).order("id")
+    .limit(Math.min(24, Math.max(1, params.limit ?? 24)));
+  if (error) throw error;
+  return ((data ?? []) as ProductRow[]).map(product);
+}
