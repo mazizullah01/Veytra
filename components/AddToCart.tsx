@@ -15,8 +15,7 @@ export default function AddToCart({ product }: { product: Product }) {
 
   const handleAdd = () => {
     if (!size) {
-      setError("Please select a size to continue.");
-      return;
+      setError("Please select your preferred size before adding to cart.");      return;
     }
     setError(null);
     add(
