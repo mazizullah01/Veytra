@@ -1,7 +1,7 @@
 export default function AnnouncementBar() {
   return (
     <div className="announcement">
-      Free worldwide shipping over $75 — complimentary returns
+     Free worldwide shipping on orders over $75 — easy returns
     </div>
   );
 }
