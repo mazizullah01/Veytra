@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
   // Account data stays on the account page; neither account data nor credentials go to Gemini.
   const accountQuestion = /\b(my orders?|order (?:status|number|id|history)|track(?:ing)?|parcel|account|password|address|email|phone|payment|card number)\b|آرڈر|پاس ورڈ|پتہ|اکاؤنٹ/i;
   if (accountQuestion.test(body.message)) return respond({ text: classified.language === "ur" ? "اپنے آرڈرز اور ذاتی معلومات کے لیے اکاؤنٹ کا صفحہ کھولیں۔ براہ کرم چیٹ میں ذاتی یا ادائیگی کی معلومات نہ بھیجیں۔" : classified.language === "roman" ? "Apne orders aur zaati maloomat ke liye account page kholein. Chat mein personal ya payment details na bhejein." : "Please open your account page for orders or personal information. Keep addresses, contact details and payment information out of this chat.", context: classified.context, private: true, links: [{ label: "Your account", href: "/profile" }] });
-  if (["shipping", "returns", "exchange", "payments", "reset"].includes(classified.intent)) return respond(faqReply(classified));
+  if (["shipping", "returns", "exchange", "payments", "reset", "greeting", "size-guide"].includes(classified.intent)) return respond(faqReply(classified));
   if (!process.env.GEMINI_API_KEY?.trim()) return respond({ error: "The AI stylist’s API key is missing. The store owner needs to finish setup before chat can work." }, 503);
   if (process.env.GEMINI_FREE_TIER_CONFIRMED !== "true") return respond({ error: "The AI stylist is waiting for the store owner to confirm its Free-tier setup. No billing needs to be enabled." }, 503);
   if (!acquireStylist()) return respond({ error: "The stylist is helping other shoppers. Please try again shortly." }, 429, 10);
@@ -49,6 +49,10 @@ export async function POST(request: NextRequest) {
     return respond({ text, context: classified.context, products, quickReplies: QUICK_REPLIES });
   } catch (error) {
     const status = error && typeof error === "object" && "status" in error ? Number(error.status) : 0;
+    const timeout = status === 504 || status === 408 || (error instanceof Error && ["AbortError", "TimeoutError"].includes(error.name));
+    // Only fixed categories and HTTP status: never log prompts, keys or provider messages.
+    console.warn("[style-assistant] provider failure", { status: status || null, kind: timeout ? "timeout" : status === 429 ? "quota" : "upstream" });
+    if (timeout) return respond({ error: "The AI stylist took too long to respond. Please try again shortly." }, 504);
     if (status === 429) { pauseStylist(); return respond({ error: "Gemini’s free quota is currently exhausted. Please try again later; no paid fallback is used." }, 429, 60); }
     return respond({ error: "The AI stylist is temporarily unavailable. Please try again shortly or browse the shop." }, 503);
   } finally { releaseStylist(); }

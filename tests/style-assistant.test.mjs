@@ -172,7 +172,7 @@ const request=(message,extra={},headers={})=>new NextRequest('http://localhost/a
 function aiHarness({failure=0,catalogFails=false}={}) {
  const calls=[];let catalogs=0;
  const load=loader({
-  '@google/genai':{ThinkingLevel:{LOW:'low'},GoogleGenAI:class {constructor(options){calls.push({options});this.models={generateContent:async payload=>{calls.at(-1).payload=payload;if(failure)throw {status:failure,message:'secret diagnostics'};return {text:'Try a cream shirt with navy trousers.'};}};}}},
+  '@google/genai':{ThinkingLevel:{MINIMAL:'minimal'},GoogleGenAI:class {constructor(options){calls.push({options});this.models={generateContent:async payload=>{calls.at(-1).payload=payload;if(failure)throw {status:failure,message:'secret diagnostics'};return {text:'Try a cream shirt with navy trousers.'};}};}}},
   '@/lib/style-assistant/search':{searchReply:async m=>{catalogs++;if(catalogFails)throw Error('catalog offline');return {text:'Verified catalog USD',context:m.context,products:[{id:'actual-shirt',name:'Actual Shirt',price:30,sizes:['M'],image:'/shirt.jpg'}]};}}
  });
  return {route:load('app/api/chat/route.ts'),calls,load,catalogs:()=>catalogs};
@@ -188,8 +188,8 @@ test('Gemini receives bounded multi-turn styling context and verified public cat
  assert.equal(response.status,200);assert.match(response.headers.get('cache-control'),/private, no-store/);
  const body=await response.json();assert.equal(body.products[0].id,'actual-shirt');assert.match(body.text,/cream/);
  assert.equal(h.calls[0].options.vertexai,false);assert.equal(h.calls[0].options.httpOptions.retryOptions.attempts,1);
- const payload=h.calls[0].payload;assert.equal(payload.model,'gemini-3.8-flash');assert.equal(payload.contents.length,3);assert.equal(payload.contents[1].role,'model');
- assert.match(payload.config.systemInstruction,/Actual Shirt/);assert.equal(payload.config.tools,undefined);assert.equal(payload.config.thinkingConfig.thinkingLevel,'low');
+ const payload=h.calls[0].payload;assert.equal(payload.model,'gemini-3.1-flash-lite');assert.equal(payload.contents.length,3);assert.equal(payload.contents[1].role,'model');
+ assert.match(payload.config.systemInstruction,/Actual Shirt/);assert.equal(payload.config.tools,undefined);assert.equal(payload.config.thinkingConfig.thinkingLevel,'minimal');
 }));
 test('skin tone, Urdu and Roman Urdu questions reach open-ended AI without changing color filters',()=>configured(async()=>{
  const h=aiHarness();
@@ -235,6 +235,18 @@ test('IP cap survives cookie rotation; global cap survives rotating visitors; co
 });
 
 test('missing API key is reported separately without calling Gemini',()=>configured(async()=>{
- delete process.env.GEMINI_API_KEY;const h=aiHarness();const response=await h.route.POST(request('Hello'));
+ delete process.env.GEMINI_API_KEY;const h=aiHarness();const response=await h.route.POST(request('Wedding styling'));
  assert.equal(response.status,503);assert.match((await response.json()).error,/API key is missing/);assert.equal(h.calls.length,0);
+}));
+
+test('greetings and sizing work without an API key or Gemini availability',async()=>{
+ const h=aiHarness({failure:504});
+ for(const message of ['hi','Hello','salam','my height is 5.8 and weight is 63 which size should I get?']){
+  const response=await h.route.POST(request(message));assert.equal(response.status,200);assert.ok((await response.json()).text);
+ }
+ assert.equal(h.calls.length,0);assert.equal(h.catalogs(),0);
+});
+test('provider timeouts produce an explicit retryable timeout instead of a generic error',()=>configured(async()=>{
+ const h=aiHarness({failure:504});const response=await h.route.POST(request('Wedding styling'));
+ assert.equal(response.status,504);assert.match((await response.json()).error,/took too long/);
 }));

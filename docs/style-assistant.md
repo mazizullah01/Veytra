@@ -11,9 +11,9 @@ GEMINI_API_KEY=your-key-from-google-ai-studio
 GEMINI_FREE_TIER_CONFIRMED=true
 ```
 
-Set the confirmation only after checking that the key's Google AI Studio project is Free tier and billing is disabled. A model name/API key does not prove the billing tier, and there is no per-generation free-only billing switch. The route fails closed until both settings exist. It never enables billing, uses Vertex, switches models, or falls back to paid services. It pins `gemini-3.8-flash`, which has published free text input/output pricing. Keep billing disabled to prevent paid API usage. Quotas and model availability are controlled by Google and may change.
+Set the confirmation only after checking that the key's Google AI Studio project is Free tier and billing is disabled. A model name/API key does not prove the billing tier, and there is no per-generation free-only billing switch. The route fails closed until both settings exist. It never enables billing, uses Vertex, switches models, or falls back to paid services. It pins `gemini-3.1-flash-lite`, which has published free text input/output pricing. Keep billing disabled to prevent paid API usage. Quotas and model availability are controlled by Google and may change.
 
-References: https://ai.google.dev/gemini-api/docs/pricing#gemini-3.8-flash and https://ai.google.dev/gemini-api/docs/billing . Google's free service may use submitted content to improve its products. Customers are told that chat messages go to Google and to avoid personal details.
+References: https://ai.google.dev/gemini-api/docs/pricing#gemini-3.1-flash-lite and https://ai.google.dev/gemini-api/docs/billing . Google's free service may use submitted content to improve its products. Customers are told that chat messages go to Google and to avoid personal details.
 
 Restart `npm run dev` after changing environment variables. Do not paste API keys in chat, commit them, or add a `NEXT_PUBLIC_` prefix.
 
@@ -27,7 +27,7 @@ Restart `npm run dev` after changing environment variables. Do not paste API key
 - `components/style-assistant/StyleAssistant.tsx`, `AssistantPanel.tsx`, `style-assistant.module.css`: lazy floating panel, keyboard controls, quick suggestions, in-memory history, trusted product cards, clear/minimize and retry without duplicate messages.
 - `lib/style-assistant/types.ts`: shared response format, welcome and outfit/color/sizing/casual/wedding suggestions.
 - Existing `rules.ts`, `search.ts` and `lib/api.ts` retrieve bounded real products using the public InsForge SDK/RLS client. Rules select catalog candidates; they do not restrict open-ended Gemini fashion advice.
-- Existing `faq.ts` provides published store policies locally. Account questions link to `/profile` without querying private data or calling Gemini. The old order helper is not used by this chat endpoint.
+- Existing `faq.ts` provides greetings, basic size guidance and published store policies locally, even when Gemini is unavailable. Account questions link to `/profile` without querying private data or calling Gemini. The old order helper is not used by this chat endpoint.
 - `.env.example`: documents server-only Gemini settings without credentials.
 - `tests/style-assistant.test.mjs`: validation, quota, privacy, model payload and real catalog-query structure tests with controlled dependencies.
 
@@ -47,4 +47,4 @@ Limits are five requests/minute separately per session and per forwarded IP, ten
 6. Clear chat, minimize/reopen, try a phone-sized viewport, and navigate to another page. Retry an error: the user message should appear only once.
 7. `node --test tests/*.test.mjs`, `npm run lint`, `npx tsc --noEmit`, `npm run build`.
 
-Automated provider tests stub Gemini to avoid billing/quota and assert the actual SDK payload, error paths and privacy boundary. A live request to Gemini 3.8 Flash succeeded with the locally configured key and LOW thinking level. Gemini 2.5 Flash rejected the new user key with 404, so the integration now pins 3.8 Flash. This implementation does not deploy the site.
+Automated provider tests stub Gemini to avoid billing/quota and assert the actual SDK payload, error paths and privacy boundary. The integration now pins Gemini 3.1 Flash-Lite with MINIMAL thinking. A live styling request succeeded in roughly 1.6 seconds while the previous 3.8 Flash request returned a deadline error. This is a fixed free-tier-capable model selection, not an automatic model fallback. This implementation does not deploy the site.
