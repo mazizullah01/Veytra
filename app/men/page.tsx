@@ -5,6 +5,8 @@ export const metadata = { title: "Men" };
 
 export default async function MenPage({ searchParams }: PageProps<"/men">) {
   const params = await searchParams;
+
+  // Extract and validate category filters and sorting options.
   const sub = typeof params.sub === "string" ? params.sub : undefined;
   const sort = parseSort(params.sort);
 
