@@ -62,9 +62,9 @@ export async function POST(request: NextRequest) {
     console.warn("[style-assistant] provider failure", { status: status || null, kind: timeout ? "timeout" : status === 429 ? "quota" : "upstream" });
     // Prefer a useful storefront reply over a hard timeout when Gemini is slow.
     if (timeout && catalogFallback?.products?.length) {
+      // Catalog-only fallback is silent in the UI; timeout details stay in server logs.
       return respond({
         ...catalogFallback,
-        text: `${catalogFallback.text}\n\n(Gemini was slow just now, so this reply uses the live catalog only.)`,
         quickReplies: catalogFallback.quickReplies ?? QUICK_REPLIES,
       });
     }

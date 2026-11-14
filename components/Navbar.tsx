@@ -6,6 +6,7 @@ import type { Route } from "next";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { Product } from "@/lib/data";
 import { getProducts } from "@/lib/api";
+import { rankCatalogueSuggestions } from "@/lib/ai-search-rank";
 import { money } from "@/lib/format";
 import { useAuth, useCart } from "@/lib/store";
 import Img from "./Img";
@@ -107,13 +108,10 @@ export default function Navbar() {
   }, []);
 
   const suggestions = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     if (q.length < 2) return [];
-    return catalogue.filter((product) =>
-      `${product.name} ${product.subcategory} ${product.category}`
-        .toLowerCase()
-        .includes(q),
-    ).slice(0, 6);
+    // Stylist-style ranking: exact name/color/kind hits first, then similar pieces.
+    return rankCatalogueSuggestions(catalogue, q, 6);
   }, [query, catalogue]);
 
   const submitSearch = (event: FormEvent) => {
