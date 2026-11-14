@@ -4,14 +4,16 @@ import { redactPersonalData, type Turn } from "./ai-input";
 import type { ProductSuggestion } from "./types";
 
 export async function fashionReply(message: string, history: Turn[], products: ProductSuggestion[], catalogState: string): Promise<string> {
+  // Keep the deadline under the API route budget, but allow slow free-tier / cold starts.
+  const deadlineMs = 28_000;
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY!, vertexai: false,
-    httpOptions: { timeout: 18_000, retryOptions: { attempts: 1 } } });
+    httpOptions: { timeout: deadlineMs, retryOptions: { attempts: 1 } } });
   const response = await ai.models.generateContent({
     model: "gemini-3.1-flash-lite",
     contents: [...history.map(t => ({ role: t.role === "assistant" ? "model" : "user", parts: [{ text: redactPersonalData(t.text) }] })),
       { role: "user", parts: [{ text: redactPersonalData(message) }] }],
     config: {
-      abortSignal: AbortSignal.timeout(18_000), maxOutputTokens: 700, thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+      abortSignal: AbortSignal.timeout(deadlineMs), maxOutputTokens: 500, thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
       systemInstruction: `You are Veytra AI Fashion Stylist, a friendly expert in global fashion, outfits, color combinations, fit, fabrics, accessories, weddings and seasonal style.
 Answer open-ended fashion questions even when Veytra does not sell the items. Follow the customer's language: English, Urdu script or Roman Urdu. Use conversation context for follow-ups. Give practical concise advice, usually under 180 words, in plain text without Markdown formatting or URLs. Ask one useful question if needed.
 All skin tones can wear all colors. Discuss personal preferences and contrast respectfully; never rank skin tones or infer race. Fit guidance is general, never a measurement guarantee.

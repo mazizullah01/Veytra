@@ -246,7 +246,10 @@ test('greetings and sizing work without an API key or Gemini availability',async
  }
  assert.equal(h.calls.length,0);assert.equal(h.catalogs(),0);
 });
-test('provider timeouts produce an explicit retryable timeout instead of a generic error',()=>configured(async()=>{
+test('provider timeouts fall back to browse links instead of a hard failure',()=>configured(async()=>{
  const h=aiHarness({failure:504});const response=await h.route.POST(request('Wedding styling'));
- assert.equal(response.status,504);assert.match((await response.json()).error,/took too long/);
+ assert.equal(response.status,200);
+ const body=await response.json();
+ assert.match(body.text,/took too long|browse/i);
+ assert.ok(Array.isArray(body.links) && body.links.length >= 1);
 }));

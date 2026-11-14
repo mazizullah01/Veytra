@@ -20,7 +20,7 @@ const words: Record<string, string> = {
   womens: "women", female: "women", ladies: "women", aurton: "women", khawateen: "women", larkion: "women",
   kala: "black", kaala: "black", kaali: "black", kali: "black", kalay: "black", siyah: "black",
   safed: "white", safaid: "white", neela: "blue", neeli: "blue", hara: "green", surkh: "red", khaki: "olive", gray: "grey",
-  garmi: "summer", garmiyon: "summer", sardi: "winter", kapray: "clothes", kapre: "clothes", kapde: "clothes",
+  garmi: "summer", garmiyon: "summer", sardi: "winter", kapray: "clothes", kapre: "clothes", kapry: "clothes", kapde: "clothes",
   dikhao: "show", dikhaye: "show", dikhaen: "show", dikhayen: "show", chahiye: "need", chahye: "need",
   kahan: "where", kidhar: "where", kab: "when", wapas: "return", badalna: "exchange", badal: "exchange",
   rupay: "pkr", rupees: "pkr", rs: "pkr", dollars: "usd", dollar: "usd", darmiyana: "medium", darmiana: "medium",
@@ -145,7 +145,7 @@ export function classifyMessage(input: string, previous: SearchContext = {}): Cl
   }
   if (has(/\boversized\b/)) context.query = "oversized";
   else if (!kind && !style && !category && !size && !color && !max && !min && !range && !hasCurrency) {
-    const stop = /^(show|me|please|find|do|you|have|a|an|the|some|any|i|need|want|looking|for|clothes|clothing|available|recommend|something|can|your|products|hai|hain|mujhe|mujhay|kya|ka|ki|ke|chahiye)$/;
+    const stop = /^(show|me|please|find|do|you|have|a|an|the|some|any|i|need|want|looking|for|clothes|clothing|available|recommend|something|can|your|products|hai|hain|mujhe|mujhay|kya|ka|ki|ke|ap|aap|kon|konsa|sa|which|what|chahiye)$/;
     const tokens = text.split(" ").filter(token => !stop.test(token) && /^[a-z][a-z0-9-]{2,19}$/.test(token)).slice(0, 3);
     if (tokens.length) context.query = tokens.join(" ");
     else if (!Object.keys(context).length && !has(/\b(clothes|clothing|products|something)\b/)) return reply("unknown");

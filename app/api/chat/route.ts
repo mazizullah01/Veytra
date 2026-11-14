@@ -8,7 +8,7 @@ import { fashionReply } from "@/lib/style-assistant/gemini";
 import { acquireStylist, limitStylist, pauseStylist, releaseStylist } from "@/lib/style-assistant/ai-limits";
 import { QUICK_REPLIES, type ProductSuggestion } from "@/lib/style-assistant/types";
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 60;
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
@@ -38,11 +38,19 @@ export async function POST(request: NextRequest) {
   if (!process.env.GEMINI_API_KEY?.trim()) return respond({ error: "The AI stylist’s API key is missing. The store owner needs to finish setup before chat can work." }, 503);
   if (process.env.GEMINI_FREE_TIER_CONFIRMED !== "true") return respond({ error: "The AI stylist is waiting for the store owner to confirm its Free-tier setup. No billing needs to be enabled." }, 503);
   if (!acquireStylist()) return respond({ error: "The stylist is helping other shoppers. Please try again shortly." }, 429, 10);
+  let products: ProductSuggestion[] = [];
+  let catalogFallback: Awaited<ReturnType<typeof searchReply>> | null = null;
   try {
-    let products: ProductSuggestion[] = [], catalogState = "not requested";
+    let catalogState = "not requested";
     if (classified.intent === "search") {
-      try { const result = await searchReply(classified, AbortSignal.timeout(4000)); products = result.products ?? []; catalogState = result.text; }
-      catch { catalogState = "temporarily unavailable; give general fashion advice and do not claim product availability"; }
+      try {
+        const result = await searchReply(classified, AbortSignal.timeout(4000));
+        products = result.products ?? [];
+        catalogState = result.text;
+        catalogFallback = result;
+      } catch {
+        catalogState = "temporarily unavailable; give general fashion advice and do not claim product availability";
+      }
     }
     const history = body.history.filter(t => !accountQuestion.test(t.text));
     const text = await fashionReply(body.message, history, products, catalogState);
@@ -52,7 +60,27 @@ export async function POST(request: NextRequest) {
     const timeout = status === 504 || status === 408 || (error instanceof Error && ["AbortError", "TimeoutError"].includes(error.name));
     // Only fixed categories and HTTP status: never log prompts, keys or provider messages.
     console.warn("[style-assistant] provider failure", { status: status || null, kind: timeout ? "timeout" : status === 429 ? "quota" : "upstream" });
-    if (timeout) return respond({ error: "The AI stylist took too long to respond. Please try again shortly." }, 504);
+    // Prefer a useful storefront reply over a hard timeout when Gemini is slow.
+    if (timeout && catalogFallback?.products?.length) {
+      return respond({
+        ...catalogFallback,
+        text: `${catalogFallback.text}\n\n(Gemini was slow just now, so this reply uses the live catalog only.)`,
+        quickReplies: catalogFallback.quickReplies ?? QUICK_REPLIES,
+      });
+    }
+    if (timeout) {
+      const language = classified.language;
+      return respond({
+        text: language === "ur"
+          ? "جواب میں تھوڑی دیر ہو گئی۔ آپ مین یا ویمن کلیکشن براؤز کر سکتے ہیں، یا دوبارہ کوشش کریں۔"
+          : language === "roman"
+            ? "Jawab thora late ho gaya. Aap Men ya Women collection browse kar sakte hain, ya dobara try karein."
+            : "That reply took too long. You can browse the Men or Women collection, or try again in a moment.",
+        context: classified.context,
+        links: [{ label: "Shop Men", href: "/men" }, { label: "Shop Women", href: "/women" }],
+        quickReplies: QUICK_REPLIES,
+      });
+    }
     if (status === 429) { pauseStylist(); return respond({ error: "Gemini’s free quota is currently exhausted. Please try again later; no paid fallback is used." }, 429, 60); }
     return respond({ error: "The AI stylist is temporarily unavailable. Please try again shortly or browse the shop." }, 503);
   } finally { releaseStylist(); }

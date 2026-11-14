@@ -62,7 +62,7 @@ export default function AssistantPanel({ open, onClose }: { open: boolean; onClo
     const current = ++version.current;
     setInput(""); setBusy(true); setFailure(""); setRetryText("");
     if (!retry) setMessages(previous => [...previous, { id: messageId(), role: "user" as const, text: trimmed, timestamp: Date.now() }].slice(-24));
-    const timer = window.setTimeout(() => controller.abort("timeout"), 28_000);
+    const timer = window.setTimeout(() => controller.abort("timeout"), 45_000);
     try {
       const response = await fetch("/api/chat", { method: "POST", credentials: "same-origin", cache: "no-store",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: trimmed, context: context.current, history: messages.filter(m => m.text !== WELCOME && !m.reply?.private && !(m.role === "user" && m.text === trimmed && retry)).slice(-8).map(m => ({ role: m.role, text: m.text.slice(0, 700) })) }), signal: controller.signal });
