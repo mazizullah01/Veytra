@@ -5,6 +5,7 @@ import ProductGallery from "@/components/ProductGallery";
 import ProductGrid from "@/components/ProductGrid";
 import Reveal from "@/components/Reveal";
 import { RefreshIcon, ShieldIcon, TruckIcon } from "@/components/Icons";
+import ProductReviews from "@/components/ProductReviews";
 import { getProductById, getRelated } from "@/lib/api";
 import { PRODUCTS } from "@/lib/data";
 import { money } from "@/lib/format";
@@ -92,6 +93,8 @@ export default async function ProductPage({ params }: PageProps<"/product/[id]">
           </div>
         </div>
       </div>
+
+      <ProductReviews productId={product.id} />
 
       {related.length > 0 && (
         <section className="section section--alt">

@@ -11,26 +11,34 @@ import Stripe from 'stripe';
 const moduleRequire = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const orderId = '12345678-1234-1234-1234-123456789abc';
-let order, writes, calls, user, session, createdParams, failWrite;
+let order, writes, calls, user, session, createdParams, failWrite, refunds;
 const stripe = new Stripe('sk_test_unit_tests_only');
 const signedSecret = 'whsec_unit_tests_only';
 const cache = {};
 function database() {
-  return { from() {
+  return { from(table) {
     let changes = null; const filters = [];
     const query = {
       select() { return query; },
       update(value) { changes = value; return query; },
       eq(key, value) { filters.push([key, value]); return query; },
       is(key, value) { filters.push([key, value]); return query; },
-      async maybeSingle() {
-        if (changes && failWrite) return { data: null, error: { message: 'constraint violation' } };
-        if (!order || filters.some(([key, value]) => order[key] !== value)) return { data: null, error: null };
-        if (changes) { writes++; Object.assign(order, changes); }
-        return { data: { ...order }, error: null };
-      },
+      limit() { return query; },
+      async maybeSingle() { return rowResult(); },
       single() { return query.maybeSingle(); },
-    }; return query;
+      then(resolve, reject) {
+        const result = table === 'orders' ? rowResult().then((row) => ({ data: row.data ? [row.data] : [], error: row.error })) : Promise.resolve({ data: [], error: null });
+        return result.then(resolve, reject);
+      },
+    };
+    function rowResult() {
+      if (table !== 'orders') return Promise.resolve({ data: null, error: null });
+      if (changes && failWrite) return Promise.resolve({ data: null, error: { message: 'constraint violation' } });
+      if (!order || filters.some(([key, value]) => order[key] !== value)) return Promise.resolve({ data: null, error: null });
+      if (changes) { writes++; Object.assign(order, changes); }
+      return Promise.resolve({ data: { ...order }, error: null });
+    }
+    return query;
   } };
 }
 const sdk = {
@@ -41,7 +49,11 @@ const fakeStripe = function () {
   return { webhooks: stripe.webhooks, checkout: { sessions: {
     async retrieve() { calls++; return { ...session }; },
     async create(params) { calls++; createdParams = params; return { ...session, status: 'open', url: 'https://checkout.stripe.com/c/pay/cs_test_example' }; },
-  } } };
+    async expire() { calls++; session = { ...session, status: 'expired' }; return { ...session }; },
+  } }, refunds: {
+    async list() { calls++; return { data: refunds }; },
+    async create() { calls++; refunds = [...refunds, { status: 'succeeded' }]; return { status: 'succeeded' }; },
+  } };
 };
 function load(relative) {
   const filename = path.join(root, relative);
@@ -53,6 +65,7 @@ function load(relative) {
     if (name === 'stripe') return fakeStripe;
     if (name === '@insforge/sdk') return sdk;
     if (name === '@/lib/stripe-server') return load('lib/stripe-server.ts');
+    if (name === '@/lib/order-actions') return load('lib/order-actions.ts');
     return moduleRequire(name);
   };
   vm.runInThisContext(`(function(require,module,exports){${code}\n})`, { filename })(scopedRequire, compiledModule, compiledModule.exports);
@@ -62,6 +75,7 @@ const helpers = load('lib/stripe-server.ts');
 const webhook = load('app/api/stripe/webhook/route.ts');
 const checkout = load('app/api/stripe/create-checkout-session/route.ts');
 const status = load('app/api/stripe/payment-status/route.ts');
+const cancel = load('app/api/orders/[orderId]/cancel/route.ts');
 beforeEach(() => {
   process.env.STRIPE_SECRET_KEY = 'sk_test_unit_tests_only';
   process.env.STRIPE_WEBHOOK_SECRET = signedSecret;
@@ -70,8 +84,11 @@ beforeEach(() => {
   user = { id: 'owner', email: 'test@example.invalid' };
   order = { id: orderId, user_id: 'owner', total: '49.99', status: 'pending', payment_status: 'unpaid', payment_method: 'stripe', stripe_session_id: 'cs_test_example' };
   session = { id: 'cs_test_example', livemode: false, mode: 'payment', payment_status: 'paid', status: 'complete', metadata: { orderId, userId: 'owner' }, client_reference_id: orderId, currency: 'usd', amount_total: 4999 };
-  writes = 0; calls = 0; createdParams = null; failWrite = false;
+  writes = 0; calls = 0; createdParams = null; failWrite = false; refunds = [];
 });
+function cancelRequest() {
+  return new Request(`http://localhost/api/orders/${orderId}/cancel`, { method: 'POST', headers: { Authorization: 'Bearer unit_test_token' } });
+}
 function webhookRequest(overrides = {}, signatureValid = true, type = 'checkout.session.completed') {
   const payload = JSON.stringify({ id: 'evt_test', type, livemode: false, data: { object: { ...session, ...overrides } } });
   const signature = stripe.webhooks.generateTestHeaderString({ payload, secret: signedSecret });
@@ -134,6 +151,31 @@ test('return status is authenticated and confirms paid Stripe sessions', async (
   assert.equal(result.paymentStatus, 'paid');
   assert.equal(result.status, 'confirmed');
   assert.equal(writes, 1);
+});
+test('unpaid order cancel expires checkout and does not refund', async () => {
+  session = { ...session, status: 'open', payment_status: 'unpaid', payment_intent: null };
+  const response = await cancel.POST(cancelRequest(), { params: Promise.resolve({ orderId }) });
+  assert.equal(response.status, 200);
+  assert.equal(order.status, 'cancelled');
+  assert.equal(order.payment_status, 'unpaid');
+  assert.equal(session.status, 'expired');
+  assert.equal(refunds.length, 0);
+});
+test('paid confirmed order cancel refunds the full payment', async () => {
+  order.payment_status = 'paid'; order.status = 'confirmed';
+  session = { ...session, payment_status: 'paid', status: 'complete', payment_intent: 'pi_test' };
+  const response = await cancel.POST(cancelRequest(), { params: Promise.resolve({ orderId }) });
+  assert.equal(response.status, 200);
+  assert.equal(order.status, 'cancelled');
+  assert.equal(order.payment_status, 'refunded');
+  assert.equal(refunds.length, 1);
+});
+test('shipped orders cannot be cancelled', async () => {
+  order.payment_status = 'paid'; order.status = 'shipped';
+  const response = await cancel.POST(cancelRequest(), { params: Promise.resolve({ orderId }) });
+  assert.equal(response.status, 409);
+  assert.equal(order.status, 'shipped');
+  assert.equal(refunds.length, 0);
 });
 test('confirmation DB failure returns a clear payment error', async () => {
   failWrite = true;

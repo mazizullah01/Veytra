@@ -1,6 +1,7 @@
 import "server-only";
 import Stripe from "stripe";
 import { createAdminClient, createClient } from "@insforge/sdk";
+import { canCancelOrder } from "@/lib/order-actions";
 
 export class PaymentError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -97,6 +98,107 @@ export async function confirmPaidOrder(
     throw new PaymentError("Order confirmation failed.", 409);
   }
   return latest.data as PaymentOrder;
+}
+
+/**
+ * Cancel an order the caller owns.
+ * Unpaid pending orders are closed and any open Checkout session is expired.
+ * Paid confirmed orders are refunded in full, then marked cancelled.
+ * Shipped and delivered orders must use a return request instead.
+ */
+export async function cancelOwnedOrder(request: Request, id: string): Promise<PaymentOrder> {
+  const { order } = await ownedOrder(request, id);
+  if (!canCancelOrder(order)) {
+    if (order.status === "shipped" || order.status === "delivered") {
+      throw new PaymentError("This order has already shipped. Request a return from your profile.", 409);
+    }
+    throw new PaymentError("This order cannot be cancelled.", 409);
+  }
+
+  const admin = adminClient();
+  const { data: returnRows, error: returnError } = await admin.database
+    .from("returns")
+    .select("id,status")
+    .eq("order_id", order.id)
+    .limit(50);
+  if (returnError) throw new PaymentError("Unable to check return requests.", 502);
+  const activeReturn = ((returnRows as { status: string }[] | null) ?? []).some(
+    (row) => row.status === "requested" || row.status === "approved" || row.status === "completed",
+  );
+  if (activeReturn) {
+    throw new PaymentError("This order already has a return request, so it can’t be cancelled.", 409);
+  }
+
+  if (order.payment_status === "unpaid") {
+    await expireOpenCheckout(order);
+    const updated = await admin.database
+      .from("orders")
+      .update({ status: "cancelled" })
+      .eq("id", order.id)
+      .eq("user_id", order.user_id)
+      .eq("status", "pending")
+      .eq("payment_status", "unpaid")
+      .select(orderColumns)
+      .maybeSingle();
+    if (updated.error) throw new PaymentError("Unable to cancel your order.", 502);
+    if (updated.data) return updated.data as PaymentOrder;
+    return readCancelledOrConflict(order.id);
+  }
+
+  await refundCheckout(order);
+  const updated = await admin.database
+    .from("orders")
+    .update({ status: "cancelled", payment_status: "refunded" })
+    .eq("id", order.id)
+    .eq("user_id", order.user_id)
+    .eq("status", "confirmed")
+    .eq("payment_status", "paid")
+    .select(orderColumns)
+    .maybeSingle();
+  if (updated.error) throw new PaymentError("The refund was sent, but the order could not be updated. Refresh and try again.", 502);
+  if (updated.data) return updated.data as PaymentOrder;
+  return readCancelledOrConflict(order.id);
+}
+
+async function expireOpenCheckout(order: PaymentOrder) {
+  if (!order.stripe_session_id) return;
+  const stripe = stripeClient();
+  const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
+  if (session.payment_status === "paid") {
+    throw new PaymentError("Payment is processing. Refresh your orders before cancelling.", 409);
+  }
+  if (session.status !== "open") return;
+  try {
+    await stripe.checkout.sessions.expire(order.stripe_session_id);
+  } catch (error) {
+    const latest = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
+    if (latest.payment_status === "paid") {
+      throw new PaymentError("Payment is processing. Refresh your orders before cancelling.", 409);
+    }
+    throw error;
+  }
+}
+
+async function refundCheckout(order: PaymentOrder) {
+  if (!order.stripe_session_id) throw new PaymentError("This paid order has no payment to refund.", 409);
+  const stripe = stripeClient();
+  const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
+  verifySession(session, order);
+  const intentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
+  if (!intentId) throw new PaymentError("Payment is not ready to refund yet.", 409);
+  const existing = await stripe.refunds.list({ payment_intent: intentId, limit: 10 });
+  const alreadyRefunded = existing.data.some((refund) => refund.status === "succeeded" || refund.status === "pending");
+  if (alreadyRefunded) return;
+  await stripe.refunds.create(
+    { payment_intent: intentId, reason: "requested_by_customer" },
+    { idempotencyKey: `cancel:${order.id}` },
+  );
+}
+
+async function readCancelledOrConflict(id: string): Promise<PaymentOrder> {
+  const latest = await adminClient().database.from("orders").select(orderColumns).eq("id", id).single();
+  if (!latest.error && latest.data?.status === "cancelled") return latest.data as PaymentOrder;
+  throw new PaymentError("This order changed. Refresh and try again.", 409);
 }
 
 export function paymentFailure(error: unknown) {

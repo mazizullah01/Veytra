@@ -4,7 +4,7 @@ import { QUICK_REPLIES, WELCOME, type AssistantReply, type ClassifiedMessage } f
  * CheckoutView.tsx and stripe-server.ts. No invented refund/delivery guarantees. */
 const FAQ = {
   shipping: "Checkout lists free shipping at $75 or more and $9.95 below that. The site advertises worldwide shipping and dispatch within 24 hours; an arrival date or country-specific delivery window is not published.",
-  returns: "The site advertises free returns within 30 days. Detailed eligibility rules, refund timing and a working online return-request process are not published. The contact form is marked as a demo and does not send requests.",
+  returns: "The site advertises free returns within 30 days. On your profile, cancel an unpaid order, or cancel a paid order that has not shipped to refund the full payment. Paid orders can also use Request return for selected items. Shipped and delivered orders can be returned, not cancelled. A return request is reviewed by the store and does not refund the card by itself.",
   exchange: "The homepage says there is no minimum on exchanges. A complete exchange policy, conditions and processing times are not published, so I can’t confirm those details.",
   payments: "Checkout uses Stripe’s hosted payment page. This build supports Stripe Sandbox payments only. Cash on delivery, PayPal and other payment methods are not implemented here.",
   "size-guide": "The catalog lists size labels, but no garment measurement chart is published. Tell me the product name and your chest/waist measurements in cm so we can identify what needs checking. I can show listed sizes, but can’t reliably choose a label or guarantee fit without that product’s measurement chart.",
@@ -14,7 +14,7 @@ const FAQ = {
 const TRANSLATIONS = {
   ur: {
     shipping: "چیک آؤٹ کے مطابق 75 USD یا زیادہ پر شپنگ مفت ہے، اس سے کم پر 9.95 USD۔ ویب سائٹ دنیا بھر میں شپنگ اور 24 گھنٹوں میں روانگی کا ذکر کرتی ہے۔ پہنچنے کی تاریخ یا ہر ملک کے لیے مدت شائع نہیں کی گئی۔",
-    returns: "ویب سائٹ 30 دنوں کے اندر مفت واپسی کا ذکر کرتی ہے۔ اہلیت، رقم واپس ملنے کی مدت اور آن لائن واپسی کے طریقے کی مکمل تفصیل موجود نہیں۔ رابطے کا فارم ڈیمو ہے اور درخواست نہیں بھیجتا۔",
+    returns: "ویب سائٹ 30 دنوں کے اندر مفت واپسی کا ذکر کرتی ہے۔ پروفائل سے غیر ادا شدہ آرڈر منسوخ کر سکتے ہیں، یا بھیجے جانے سے پہلے ادا شدہ آرڈر منسوخ کر کے پوری رقم واپس لے سکتے ہیں۔ ادا شدہ آرڈر پر منتخب اشیاء کے لیے Request return بھی ہے۔ بھیجے یا پہنچائے گئے آرڈر واپس ہو سکتے ہیں، منسوخ نہیں۔ واپسی کی درخواست دکان دیکھتی ہے؛ کارڈ خود بخود ریفنڈ نہیں ہوتا۔",
     exchange: "ہوم پیج کے مطابق ایکسچینج کے لیے کم از کم خریداری کی شرط نہیں۔ مکمل شرائط اور کارروائی کا وقت شائع نہیں کیا گیا، اس لیے میں ان کی تصدیق نہیں کر سکتا۔",
     payments: "چیک آؤٹ Stripe کے ادائیگی صفحے پر جاتا ہے۔ یہ ورژن صرف Sandbox ٹیسٹ ادائیگیاں قبول کرتا ہے۔ کیش آن ڈیلیوری، PayPal یا دوسرے طریقے موجود نہیں۔",
     "size-guide": "کیٹلاگ میں سائز کے نام ہیں، مگر لباس کی پیمائش کا چارٹ نہیں۔ پروڈکٹ کا نام اور سینے یا کمر کی پیمائش سینٹی میٹر میں بتائیں تاکہ معلوم ہو کیا چیک کرنا ہے۔ متعلقہ چارٹ کے بغیر میں درست فِٹ یا کسی سائز کی ضمانت نہیں دے سکتا۔",
@@ -23,7 +23,7 @@ const TRANSLATIONS = {
   },
   roman: {
     shipping: "Checkout par $75 ya zyada ki shopping par shipping free hai; is se kam par $9.95 hai. Website worldwide shipping aur 24 ghanton mein dispatch batati hai. Delivery ki tareekh ya har mulk ka waqt publish nahi kiya gaya.",
-    returns: "Website 30 din ke andar free returns batati hai. Eligibility, refund ka waqt aur online return request ka mukammal tareeqa publish nahi hai. Contact form demo hai aur request send nahi karta.",
+    returns: "Website 30 din ke andar free returns batati hai. Profile se unpaid order cancel kar sakte hain, ya shipping se pehle paid order cancel karke poori payment refund le sakte hain. Paid order par selected items ke liye Request return bhi hai. Shipped ya delivered order return ho sakta hai, cancel nahi. Return request dukaan dekhti hai; card khud refund nahi hota.",
     exchange: "Homepage ke mutabiq exchanges par minimum purchase nahi hai. Mukammal sharaait aur processing ka waqt publish nahi kiya gaya, is liye main inki tasdeeq nahi kar sakta.",
     payments: "Checkout Stripe ke payment page par jata hai. Yeh build sirf Sandbox test payments support karta hai. Cash on delivery, PayPal aur dusre tareeqay implement nahi hain.",
     "size-guide": "Catalog mein size labels hain magar garment measurement chart nahi hai. Product ka naam aur chest/waist ki measurements cm mein bata dein taake maloom ho kya check karna hai. Product chart ke baghair main exact fit ya size ki guarantee nahi de sakta.",

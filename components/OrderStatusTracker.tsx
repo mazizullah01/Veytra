@@ -1,6 +1,9 @@
 const STAGES = ["pending", "confirmed", "shipped", "delivered"] as const;
 
 export default function OrderStatusTracker({ status }: { status: string }) {
+  if (status === "cancelled" || status === "canceled") {
+    return <p className="order-tracker order-tracker--cancelled">Cancelled</p>;
+  }
   const current = Math.max(0, STAGES.indexOf(status as (typeof STAGES)[number]));
 
   return (

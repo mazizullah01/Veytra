@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppLink from "@/components/AppLink";
 import OrderStatusTracker from "@/components/OrderStatusTracker";
+import CancelOrderButton from "@/components/CancelOrderButton";
+import ReturnRequestForm from "@/components/ReturnRequestForm";
+import { canCancelOrder, canRequestReturn } from "@/lib/order-actions";
 import { useAuth, useCart } from "@/lib/store";
 import { errorMessage } from "@/lib/insforge";
 import { authRequest, insforge } from "@/lib/insforge-client";
@@ -62,10 +65,26 @@ export default function ProfilePage() {
         orders.map(order => <article className="checkout-block" key={order.id}>
           <h3 style={{ overflowWrap: "anywhere" }}>Order {order.id}</h3>
           <p className="muted"><time dateTime={order.created_at}>{new Date(order.created_at).toLocaleDateString()}</time> · {money(Number(order.total))}</p>
-          <p><span style={{ display: "inline-block", padding: "0.35rem 0.75rem", border: "1px solid var(--line, #ddd)" }}>{order.payment_status === "paid" ? "Paid" : "Unpaid"}</span></p>
-          {order.payment_status !== "paid" && <AppLink href={`/payment/${order.id}`} className="link-underline">Continue to payment</AppLink>}
+          <p><span style={{ display: "inline-block", padding: "0.35rem 0.75rem", border: "1px solid var(--line, #ddd)" }}>{order.payment_status === "paid" ? "Paid" : order.payment_status === "refunded" ? "Refunded" : "Unpaid"}</span></p>
           {order.items.map((item, index) => <div className="summary__row" key={`${item.id}-${item.size}-${index}`}><span>{item.name} · Size {item.size} × {item.qty}</span><span>{money(Number(item.price) * item.qty)}</span></div>)}
           <OrderStatusTracker status={order.status} />
+          <div className="order-actions">
+            {order.payment_status === "unpaid" && order.status === "pending" && <AppLink href={`/payment/${order.id}`} className="link-underline">Continue to payment</AppLink>}
+            {canCancelOrder(order) && (
+              <CancelOrderButton
+                orderId={order.id}
+                refund={order.payment_status === "paid"}
+                onDone={() => setRevision((value) => value + 1)}
+              />
+            )}
+            {canRequestReturn(order) && (
+              <ReturnRequestForm
+                orderId={order.id}
+                items={order.items}
+                onDone={() => setRevision((value) => value + 1)}
+              />
+            )}
+          </div>
         </article>)}
     </section>
   </div>;
