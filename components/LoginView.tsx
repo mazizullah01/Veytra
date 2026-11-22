@@ -12,6 +12,8 @@ export default function LoginView() {
   const [verificationEmail, setVerificationEmail] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const destination = () => {
     const next = new URLSearchParams(window.location.search).get("next");
     return next?.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/profile";
@@ -19,10 +21,8 @@ export default function LoginView() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (busy) return;
-    const fields = new FormData(event.currentTarget);
-    const email = String(fields.get("email") ?? "").trim();
-    const enteredPassword = String(fields.get("password") ?? "");
-    if (enteredPassword.length < 8) { setMessage("Use a password with at least 8 characters."); return; }
+    const trimmedEmail = email.trim();
+    if (password.length < 8) { setMessage("Use a password with at least 8 characters."); return; }
     setBusy(true); setMessage("");
     try {
       if (tab === "signup") {
@@ -30,18 +30,18 @@ export default function LoginView() {
           user: unknown;
           requireEmailVerification?: boolean;
         }>("/api/auth/sign-up", {
-          email,
-          password: enteredPassword,
-          name: String(fields.get("name") ?? "").trim(),
+          email: trimmedEmail,
+          password,
+          name: name.trim(),
           redirectTo: window.location.origin + "/login",
         });
         if (result.requireEmailVerification) {
-          setVerificationEmail(email); setPassword(enteredPassword);
+          setVerificationEmail(trimmedEmail);
           setMessage("Check your email for the verification code or link.");
           return;
         }
       } else {
-        await authRequest("/api/auth/sign-in", { email, password: enteredPassword });
+        await authRequest("/api/auth/sign-in", { email: trimmedEmail, password });
       }
       window.location.assign(destination());
     } catch (error) {
@@ -49,7 +49,7 @@ export default function LoginView() {
         ? Number((error as { statusCode: number }).statusCode)
         : 0;
       if (statusCode === 403) {
-        setVerificationEmail(email); setPassword(enteredPassword);
+        setVerificationEmail(trimmedEmail);
         setMessage("Verify your email to sign in. You can resend your verification code below.");
         return;
       }
@@ -104,7 +104,9 @@ export default function LoginView() {
             className={`tab ${tab === "signin" ? "is-active" : ""}`}
             onClick={() => {
               setTab("signin");
-              setMessage(""); setVerificationEmail("");
+              setMessage("");
+              setVerificationEmail("");
+              setCode("");
             }}
           >
             Sign In
@@ -116,7 +118,9 @@ export default function LoginView() {
             className={`tab ${tab === "signup" ? "is-active" : ""}`}
             onClick={() => {
               setTab("signup");
-              setMessage(""); setVerificationEmail("");
+              setMessage("");
+              setVerificationEmail("");
+              setCode("");
             }}
           >
             Create Account
@@ -138,18 +142,27 @@ export default function LoginView() {
             <div className="field">
               <label htmlFor="signin-email">Email</label>
               <input
-                id="signin-email" name="email" autoComplete="email"
+                id="signin-email"
+                name="email"
+                autoComplete="email"
                 type="email"
                 placeholder="you@example.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
                 required
               />
             </div>
             <div className="field">
               <label htmlFor="signin-password">Password</label>
               <input
-                id="signin-password" name="password" autoComplete="current-password" minLength={8}
+                id="signin-password"
+                name="password"
+                autoComplete="current-password"
+                minLength={8}
                 type="password"
                 placeholder="••••••••"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
                 required
               />
             </div>
@@ -166,23 +179,40 @@ export default function LoginView() {
           <form onSubmit={submit}>
             <div className="field">
               <label htmlFor="signup-name">Full name</label>
-              <input id="signup-name" name="name" autoComplete="name" placeholder="Jane Doe" required />
+              <input
+                id="signup-name"
+                name="name"
+                autoComplete="name"
+                placeholder="Jane Doe"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
+              />
             </div>
             <div className="field">
               <label htmlFor="signup-email">Email</label>
               <input
-                id="signup-email" name="email" autoComplete="email"
+                id="signup-email"
+                name="email"
+                autoComplete="email"
                 type="email"
                 placeholder="you@example.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
                 required
               />
             </div>
             <div className="field">
               <label htmlFor="signup-password">Password</label>
               <input
-                id="signup-password" name="password" autoComplete="new-password" minLength={8}
+                id="signup-password"
+                name="password"
+                autoComplete="new-password"
+                minLength={8}
                 type="password"
                 placeholder="At least 8 characters"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
                 required
               />
             </div>

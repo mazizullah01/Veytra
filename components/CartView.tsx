@@ -28,25 +28,46 @@ export default function CartView() {
 
   if (items.length === 0) {
     return (
-      <section className="container">
-        <div className="empty-state">
-          <span className="eyebrow">Your bag</span>
-          <h1 style={{ marginTop: "0.75rem" }}>Your cart is empty</h1>
-          <p className="muted">
-            Nothing here yet — discover the collection and add your first piece.
+      <section className="cart-empty" aria-label="Empty cart">
+        <div className="cart-empty__inner">
+          <div className="cart-empty__art" aria-hidden>
+            <span className="cart-empty__glow" />
+            <svg className="cart-empty__bag" viewBox="0 0 80 80" fill="none">
+              {/* single arched handle */}
+              <path
+                d="M30 28c0-8.5 5.2-14 10-14s10 5.5 10 14"
+                stroke="#4A433F"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              {/* trapezoid bag body */}
+              <path
+                d="M24 28h32l4.5 36.5a3.5 3.5 0 0 1-3.5 4H23a3.5 3.5 0 0 1-3.5-4L24 28Z"
+                stroke="#4A433F"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              {/* top-right sparks: dark + gold */}
+              <path d="M58 18l6-5" stroke="#4A433F" strokeWidth="2" strokeLinecap="round" />
+              <path d="M60 23l5.5-2.5" stroke="#C5A373" strokeWidth="2" strokeLinecap="round" />
+              {/* bottom-left sparks: dark + gold */}
+              <path d="M16 58l-5.5 5" stroke="#4A433F" strokeWidth="2" strokeLinecap="round" />
+              <path d="M18 62l-5 2.5" stroke="#C5A373" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+
+          <h1 className="cart-empty__title">Your cart is empty</h1>
+          <p className="cart-empty__copy">
+            Looks like you haven&apos;t added anything to your cart yet.
           </p>
-          <div
-            style={{
-              display: "flex",
-              gap: "1rem",
-              justifyContent: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <AppLink href="/women" className="btn btn--solid">
+
+          <div className="cart-empty__actions">
+            <AppLink href="/women" className="btn btn--outline cart-empty__btn">
               <span>Shop Women</span>
             </AppLink>
-            <AppLink href="/men" className="btn btn--outline">
+            <AppLink href="/men" className="btn btn--outline cart-empty__btn">
               <span>Shop Men</span>
             </AppLink>
           </div>

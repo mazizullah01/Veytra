@@ -108,6 +108,66 @@ export const ShieldIcon = (p: IconProps) => (
   </svg>
 );
 
+export const LockIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </svg>
+);
+
+export const EnvelopeIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m4 7 8 6 8-6" />
+  </svg>
+);
+
+export const PhoneIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M7 3h3l1.5 4-2 1.5a12 12 0 0 0 5 5L16 12l4 1.5V17a2 2 0 0 1-2 2A14 14 0 0 1 5 5a2 2 0 0 1 2-2Z" />
+  </svg>
+);
+
+export const CardIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="2" y="5" width="20" height="14" rx="2" />
+    <path d="M2 10h20" />
+  </svg>
+);
+
+export const PackageIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M3 8.5 12 3l9 5.5v8L12 22l-9-5.5v-8Z" />
+    <path d="M12 12v10M3 8.5l9 5.5 9-5.5" />
+  </svg>
+);
+
+export const HeartIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10Z" />
+  </svg>
+);
+
+export const SendIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 12 20 4l-7 16-2-7-7-1Z" />
+  </svg>
+);
+
+export const OrdersIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M7 4h10v16H7z" />
+    <path d="M10 8h4M10 12h4M10 16h3" />
+  </svg>
+);
+
+export const SettingsIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 3v2M12 19v2M4.9 6.5l1.4 1.4M17.7 16.1l1.4 1.4M3 12h2M19 12h2M4.9 17.5l1.4-1.4M17.7 7.9l1.4-1.4" />
+  </svg>
+);
+
 export const RefreshIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M20 11a8 8 0 0 0-14-5L4 8" />

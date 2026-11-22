@@ -15,17 +15,18 @@ export async function orderReply(message: ClassifiedMessage): Promise<AssistantR
   const client = createServerClient({ cookies: store });
   const { data: identity, error: authError } = await client.auth.getCurrentUser();
   if (authError || !identity?.user) return signIn;
-  let query = client.database.from("orders").select("id,created_at,status").eq("user_id", identity.user.id);
+  let query = client.database.from("orders").select("id,order_number,created_at,status").eq("user_id", identity.user.id);
   if (message.orderId) query = query.eq("id", message.orderId);
   const { data, error } = await query.order("created_at", { ascending: false }).order("id").limit(3)
     .abortSignal(AbortSignal.timeout(7000));
   if (error) throw new Error("Order lookup is unavailable.");
-  const orders = data as { id: string; created_at: string; status: string }[] | null;
+  const orders = data as { id: string; order_number?: string | null; created_at: string; status: string }[] | null;
   return {
     text: !orders?.length ? "I couldn’t find that order in your account. Open your order history to check the order reference." :
       "Your latest matching order records:\n" + orders.map(order => {
         const placed = new Date(order.created_at);
-        return `Order ${order.id} · ${String(order.status).slice(0, 40)}${Number.isNaN(placed.getTime()) ? "" : ` · placed ${placed.toISOString().slice(0, 10)}`}`;
+        const ref = order.order_number?.trim() || `Order ${order.id.slice(0, 8)}`;
+        return `${ref} · ${String(order.status).slice(0, 40)}${Number.isNaN(placed.getTime()) ? "" : ` · placed ${placed.toISOString().slice(0, 10)}`}`;
       }).join("\n") + "\nThese are recorded statuses, not a courier delivery estimate.",
     context: message.context, private: true, links: [{ label: "Open your order history", href: "/profile" }],
   };

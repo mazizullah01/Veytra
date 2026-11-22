@@ -28,6 +28,8 @@ export async function GET(request: Request) {
     return Response.json(
       {
         orderId: confirmed.id,
+        orderNumber: confirmed.order_number,
+        total: confirmed.total,
         stripePaid: session.payment_status === "paid",
         paymentStatus: confirmed.payment_status,
         status: confirmed.status,

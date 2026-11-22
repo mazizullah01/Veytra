@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { SendIcon } from "./Icons";
 import { adminFetch } from "@/lib/admin-client";
+import { formatOrderNumber } from "@/lib/order-number";
+import { money } from "@/lib/format";
 import { RETURN_REASON_LABELS, RETURN_REASONS, type ReturnReason } from "@/lib/product-health";
 
 interface Line {
@@ -14,10 +17,12 @@ interface Line {
 
 export default function ReturnRequestForm({
   orderId,
+  orderNumber,
   items,
   onDone,
 }: {
   orderId: string;
+  orderNumber?: string | null;
   items: Line[];
   onDone?: () => void;
 }) {
@@ -32,7 +37,7 @@ export default function ReturnRequestForm({
     const initial: Record<string, { qty: number; reason: ReturnReason; include: boolean }> = {};
     for (const item of items) {
       const key = `${item.id}::${item.size}`;
-      initial[key] = { qty: 1, reason: "wrong_fit", include: false };
+      initial[key] = { qty: 1, reason: "wrong_fit", include: items.length === 1 };
     }
     return initial;
   });
@@ -74,7 +79,7 @@ export default function ReturnRequestForm({
     return (
       <div>
         <button type="button" className="btn btn--outline" onClick={() => setOpen(true)}>
-          <span>Request return</span>
+          <span>Request a return</span>
         </button>
         {success && <p className="muted">{success}</p>}
       </div>
@@ -83,26 +88,37 @@ export default function ReturnRequestForm({
 
   return (
     <div className="return-form">
-      <h4>Request a return</h4>
-      <p className="muted">Return rate metrics use completed returns only. Pending requests are for owner review.</p>
+      <h4>Request a Return</h4>
+      <p className="muted">
+        Let us know why you would like to return an item from {formatOrderNumber(orderNumber, orderId)}.
+      </p>
+
       {items.map((item) => {
         const key = `${item.id}::${item.size}`;
         const row = selected[key];
         return (
-          <div className="return-form__row" key={key}>
-            <label>
-              <input
-                type="checkbox"
-                checked={row.include}
-                onChange={(e) =>
-                  setSelected((prev) => ({
-                    ...prev,
-                    [key]: { ...prev[key], include: e.target.checked },
-                  }))
-                }
-              />{" "}
-              {item.name} · Size {item.size} (bought {item.qty})
-            </label>
+          <div key={key}>
+            <div className="return-form__product">
+              <label style={{ display: "flex", gap: "0.65rem", alignItems: "flex-start" }}>
+                <input
+                  type="checkbox"
+                  checked={row.include}
+                  onChange={(e) =>
+                    setSelected((prev) => ({
+                      ...prev,
+                      [key]: { ...prev[key], include: e.target.checked },
+                    }))
+                  }
+                />
+                <span>
+                  <strong>{item.name}</strong>
+                  <br />
+                  <span className="muted">
+                    Size {item.size} · Qty available {item.qty} · {money(Number(item.price))}
+                  </span>
+                </span>
+              </label>
+            </div>
             {row.include && (
               <div className="return-form__fields">
                 <label className="field">
@@ -122,7 +138,7 @@ export default function ReturnRequestForm({
                   />
                 </label>
                 <label className="field">
-                  <span className="field__label">Reason</span>
+                  <span className="field__label">Reason *</span>
                   <select
                     className="field__input"
                     value={row.reason}
@@ -145,6 +161,7 @@ export default function ReturnRequestForm({
           </div>
         );
       })}
+
       <label className="field">
         <span className="field__label">Notes (optional)</span>
         <textarea
@@ -153,19 +170,23 @@ export default function ReturnRequestForm({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           maxLength={1000}
+          placeholder="Anything else we should know?"
         />
       </label>
+
       {error && (
         <p className="field__error" role="alert">
           {error}
         </p>
       )}
+
       <div className="return-form__actions">
         <button type="button" className="btn btn--solid" disabled={busy} onClick={() => void submit()}>
-          <span>{busy ? "Submitting…" : "Submit return"}</span>
+          <SendIcon size={16} />
+          <span>{busy ? "Submitting…" : "Submit Return Request"}</span>
         </button>
         <button type="button" className="btn btn--outline" disabled={busy} onClick={() => setOpen(false)}>
-          <span>Close</span>
+          <span>Cancel</span>
         </button>
       </div>
     </div>

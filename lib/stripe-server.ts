@@ -6,9 +6,9 @@ import { canCancelOrder } from "@/lib/order-actions";
 export class PaymentError extends Error {
   constructor(message: string, public status = 400) { super(message); }
 }
-export const orderColumns = "id,user_id,total,status,payment_status,payment_method,stripe_session_id";
+export const orderColumns = "id,order_number,user_id,total,status,payment_status,payment_method,stripe_session_id";
 export interface PaymentOrder {
-  id: string; user_id: string; total: number | string; status: string;
+  id: string; order_number: string; user_id: string; total: number | string; status: string;
   payment_status: string; payment_method: string; stripe_session_id: string | null;
 }
 export function stripeClient() {
@@ -50,6 +50,25 @@ export function appUrl() {
   const url = new URL(configured);
   if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) throw new PaymentError("Invalid store URL.", 503);
   return url.origin;
+}
+
+/** Prefer the browser origin for localhost so Stripe returns to local UI during development. */
+export function checkoutReturnOrigin(request: Request) {
+  const raw = request.headers.get("origin") || request.headers.get("referer");
+  if (raw) {
+    try {
+      const url = new URL(raw);
+      if (
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        (url.hostname === "localhost" || url.hostname === "127.0.0.1")
+      ) {
+        return url.origin;
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  return appUrl();
 }
 export function verifySession(session: Stripe.Checkout.Session, order: PaymentOrder) {
   if (session.livemode || session.mode !== "payment" || session.metadata?.orderId !== order.id || session.client_reference_id !== order.id || session.metadata?.userId !== order.user_id || session.currency !== "usd" || session.amount_total !== usdCents(order.total) || order.payment_method !== "stripe" || order.stripe_session_id !== session.id)

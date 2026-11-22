@@ -1,7 +1,7 @@
 import { cache } from "react";
 import type { Category, Product } from "./data";
 import { productImageSrc } from "./format";
-import { publicInsforge as insforge } from "./insforge";
+import { asError, publicInsforge as insforge } from "./insforge";
 
 /** Backend seam: keep page-facing signatures and map database names here. */
 export type SortKey = "featured" | "price-asc" | "price-desc" | "newest";
@@ -42,7 +42,7 @@ async function catalogue(params: ProductQuery = {}, flag?: "featured" | "is_new"
   // Search retains the existing literal, case-insensitive substring behavior.
   const q = params.query?.trim().toLowerCase();
   const { data, error } = await request.limit(q ? 1000 : Math.max(0, Math.min(params.limit ?? 1000, 1000)));
-  if (error) throw error;
+  if (error) throw asError(error);
   let list = (data as ProductRow[] ?? []).map(product);
   if (q) list = list.filter(p => [p.name, p.category, p.subcategory, p.description].some(v => v.toLowerCase().includes(q)));
   return typeof params.limit === "number" ? list.slice(0, Math.max(0, params.limit)) : list;
@@ -51,12 +51,27 @@ export async function getProducts(params: ProductQuery = {}): Promise<Product[]>
 /** Request-scoped dedupe for PDP metadata + page (and related lookups). */
 export const getProductById = cache(async (id: string): Promise<Product | null> => {
   const { data, error } = await insforge.database.from("products").select(columns).eq("id", id).maybeSingle();
-  if (error) throw error;
+  if (error) throw asError(error);
   return data ? product(data as ProductRow) : null;
 });
-export const getFeatured = cache(async (limit = 8): Promise<Product[]> => catalogue({ limit }, "featured"));
-export const getNewArrivals = cache(async (limit = 8): Promise<Product[]> => catalogue({ sort: "newest", limit }, "is_new"));
-export const getTrending = cache(async (limit = 8): Promise<Product[]> => catalogue({ limit }, "trending"));
+async function safeCatalogue(params: ProductQuery = {}, flag?: "featured" | "is_new" | "trending"): Promise<Product[]> {
+  try {
+    return await catalogue(params, flag);
+  } catch (error) {
+    console.error("[catalogue]", errorMessageSafe(error));
+    return [];
+  }
+}
+function errorMessageSafe(error: unknown) {
+  try {
+    return asError(error).message;
+  } catch {
+    return "catalogue unavailable";
+  }
+}
+export const getFeatured = cache(async (limit = 8): Promise<Product[]> => safeCatalogue({ limit }, "featured"));
+export const getNewArrivals = cache(async (limit = 8): Promise<Product[]> => safeCatalogue({ sort: "newest", limit }, "is_new"));
+export const getTrending = cache(async (limit = 8): Promise<Product[]> => safeCatalogue({ limit }, "trending"));
 export async function getRelated(id: string, limit = 4): Promise<Product[]> {
   const current = await getProductById(id);
   if (!current) return [];
@@ -100,6 +115,6 @@ export async function getAssistantProducts(params: AssistantProductQuery, signal
   if (signal) request = request.abortSignal(signal);
   const { data, error } = await request.order("price", { ascending: true }).order("id")
     .limit(Math.min(24, Math.max(1, params.limit ?? 24)));
-  if (error) throw error;
+  if (error) throw asError(error);
   return ((data ?? []) as ProductRow[]).map(product);
 }
