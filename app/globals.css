@@ -2544,6 +2544,10 @@ body.checkout-mode main {
   border: 2px solid var(--line);
   background: var(--paper, #fff);
   z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
 }
 
 .order-tracker__step.is-done .order-tracker__dot,
@@ -2560,9 +2564,273 @@ body.checkout-mode main {
   color: var(--muted);
 }
 
+.order-tracker__date {
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .order-tracker__step.is-done .order-tracker__label,
 .order-tracker__step.is-current .order-tracker__label {
   color: var(--ink);
+}
+
+.order-tracker--confirm {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  gap: 0 !important;
+  margin: 2rem 0 0.25rem;
+  padding: 0.75rem 0.25rem 0.5rem;
+}
+
+.order-tracker--confirm .order-tracker__step {
+  flex: 1;
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+  gap: 0 !important;
+}
+
+.order-tracker--confirm .order-tracker__dot {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-width: 2px;
+}
+
+.order-tracker--confirm .order-tracker__step:not(:last-child)::after {
+  top: 0.6rem !important;
+  left: calc(50% + 14px) !important;
+  right: calc(-50% + 14px) !important;
+  width: auto !important;
+  height: 3px !important;
+  background: #e5e0da;
+}
+
+.order-tracker--confirm .order-tracker__step.is-done:not(:last-child)::after {
+  background: #16130f !important;
+}
+
+.order-tracker--confirm .order-tracker__label {
+  margin-top: 0.8rem !important;
+  font-size: 0.9rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #8a8178;
+}
+
+.order-tracker--confirm .order-tracker__step.is-done .order-tracker__label,
+.order-tracker--confirm .order-tracker__step.is-current .order-tracker__label {
+  color: #16130f;
+}
+
+.order-tracker--confirm .order-tracker__date {
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: #8a8178;
+}
+
+/* Order confirmation card (post-payment) --------------------------------- */
+.order-confirm-page {
+  min-height: calc(100vh - var(--nav-h) - 3rem);
+  padding: clamp(1.75rem, 5vw, 3.5rem) var(--gutter) clamp(3rem, 8vw, 5rem);
+  background: #f7f3ee;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 1.25rem;
+}
+
+.order-confirm-page--loading,
+.order-confirm-page--alt {
+  place-items: center;
+  text-align: center;
+}
+
+.order-confirm-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+  width: min(100%, 820px);
+}
+
+.order-confirm {
+  width: min(100%, 820px);
+  padding: clamp(1.35rem, 3vw, 2rem);
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid #ebe6df;
+  box-shadow: 0 18px 48px -34px rgba(22, 19, 15, 0.45);
+}
+
+.order-confirm__crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1.15rem;
+  color: #8a8178;
+  font-size: 0.82rem;
+}
+
+.order-confirm__crumbs a:hover {
+  color: var(--ink);
+}
+
+.order-confirm__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem 1.5rem;
+}
+
+.order-confirm__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.85rem;
+}
+
+.order-confirm__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4.5vw, 2.75rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #16130f;
+}
+
+.order-confirm__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: #efebe3;
+  color: #4a443c;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.order-confirm__badge--ok {
+  background: color-mix(in srgb, #2f6b4f 14%, #fff);
+  color: #2f6b4f;
+}
+
+.order-confirm__badge--bad {
+  background: color-mix(in srgb, #9c3b2f 12%, #fff);
+  color: #9c3b2f;
+}
+
+.order-confirm__meta {
+  margin: 0.55rem 0 0;
+  color: #8a8178;
+  font-size: 0.95rem;
+}
+
+.order-confirm__head .btn {
+  gap: 0.45rem;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.order-confirm__items {
+  margin-top: 1.75rem;
+  padding: 1.15rem 1.2rem;
+  border: 1px solid #ebe6df;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.order-confirm__items-title {
+  margin: 0 0 1rem;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.order-confirm__line {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1.4fr) auto auto;
+  gap: 0.9rem 1rem;
+  align-items: center;
+  padding: 0.85rem 0;
+  border-top: 1px solid #f0ebe4;
+}
+
+.order-confirm__line:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.order-confirm__thumb {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f1ebe3;
+  border: 1px solid #ebe6df;
+}
+
+.order-confirm__line-info {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.order-confirm__line-info strong {
+  font-family: var(--font-sans);
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.order-confirm__line-info span,
+.order-confirm__line-price small {
+  color: #8a8178;
+  font-size: 0.88rem;
+}
+
+.order-confirm__line-price {
+  display: grid;
+  gap: 0.2rem;
+  text-align: right;
+  font-size: 0.95rem;
+}
+
+.order-confirm__line-sub {
+  font-weight: 650;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .order-confirm__line {
+    grid-template-columns: 64px 1fr auto;
+  }
+  .order-confirm__line-sub {
+    grid-column: 2 / -1;
+    text-align: left;
+  }
+  .order-tracker--confirm .order-tracker__label {
+    font-size: 0.72rem;
+  }
+  .order-tracker--confirm .order-tracker__date {
+    font-size: 0.7rem;
+  }
+  .order-tracker--confirm .order-tracker__dot {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
 }
 
 /* SECTION: Newsletter & promo -------------------------------------------- */
@@ -3262,7 +3530,54 @@ body.checkout-mode main {
   border-bottom: 1px solid var(--line);
   font-size: 0.9rem;
 }
-.admin-alert-actions { display: flex; gap: 0.5rem; }
+.admin-alert-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.admin-filters--returns {
+  grid-template-columns: minmax(0, 16rem);
+}
+.admin-returns {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+}
+.admin-returns__card {
+  padding: 1.15rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface, #fff);
+}
+.admin-returns__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.85rem 1.25rem;
+  margin-bottom: 0.85rem;
+}
+.admin-returns__status {
+  text-transform: capitalize;
+  font-size: 1rem;
+}
+.admin-returns__order {
+  overflow-wrap: anywhere;
+}
+.admin-returns__notes {
+  margin: 0 0 0.85rem;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+}
+.admin-returns__items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.65rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.85rem;
+}
+.admin-returns__items p {
+  margin: 0.2rem 0 0;
+}
 .admin-trend {
   display: flex;
   align-items: flex-end;
@@ -3813,25 +4128,25 @@ body.checkout-mode main {
 
 @media (max-width: 900px) {
   .summary--sticky { position: static; }
-  .order-tracker {
+  .order-tracker:not(.order-tracker--confirm) {
     flex-direction: column;
     align-items: stretch;
     gap: 0.85rem;
   }
-  .order-tracker__step {
+  .order-tracker:not(.order-tracker--confirm) .order-tracker__step {
     flex-direction: row;
     align-items: center;
     gap: 0.75rem;
     text-align: left;
   }
-  .order-tracker__step:not(:last-child)::after {
+  .order-tracker:not(.order-tracker--confirm) .order-tracker__step:not(:last-child)::after {
     top: calc(100% + 0.1rem);
     left: 5px;
     right: auto;
     width: 2px;
     height: 0.85rem;
   }
-  .order-tracker__label { margin-top: 0; }
+  .order-tracker:not(.order-tracker--confirm) .order-tracker__label { margin-top: 0; }
 }
 .review-list li {
   padding: var(--space-3) 0;

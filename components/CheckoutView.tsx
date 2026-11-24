@@ -67,6 +67,7 @@ export default function CheckoutView() {
   const [discountCode, setDiscountCode] = useState("");
   const router = useRouter();
   const orderId = useRef<string | null>(null);
+  const leaving = useRef(false);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Errors>({});
 
@@ -153,16 +154,18 @@ export default function CheckoutView() {
         saved = data;
       }
       if (!saved) throw new Error("Order could not be confirmed. Please retry.");
+      leaving.current = true;
       clear();
       router.push(`/payment/${saved.id}`);
+      return;
     } catch (error) {
+      leaving.current = false;
       setFailure(errorMessage(error));
-    } finally {
       setBusy(false);
     }
   };
 
-  if (loading || (user && !ready)) {
+  if (loading || (user && !ready) || busy || leaving.current) {
     return (
       <div className="shop-checkout">
         <div className="shop-checkout__loading">

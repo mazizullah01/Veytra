@@ -11,9 +11,11 @@ import {
   OrdersIcon,
   SearchIcon,
   SettingsIcon,
+  ShieldIcon,
   TrashIcon,
   UserIcon,
 } from "@/components/Icons";
+import { adminFetch } from "@/lib/admin-client";
 import { canCancelOrder, canRequestReturn } from "@/lib/order-actions";
 import { useAuth, useCart } from "@/lib/store";
 import { errorMessage } from "@/lib/insforge";
@@ -50,6 +52,7 @@ export default function ProfilePage() {
   const [revision, setRevision] = useState(0);
   const [tab, setTab] = useState<Tab>("orders");
   const [query, setQuery] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login?next=%2Fprofile");
@@ -69,6 +72,13 @@ export default function ProfilePage() {
           setError("");
         }
         setPending(false);
+      });
+    void adminFetch<{ admin: boolean }>("/api/admin/me")
+      .then(() => {
+        if (active) setIsAdmin(true);
+      })
+      .catch(() => {
+        if (active) setIsAdmin(false);
       });
     return () => {
       active = false;
@@ -148,6 +158,11 @@ export default function ProfilePage() {
           >
             <HeartIcon size={16} /> Wishlist
           </button>
+          {isAdmin && (
+            <button type="button" onClick={() => router.push("/admin/product-health")}>
+              <ShieldIcon size={16} /> Product Health
+            </button>
+          )}
           <button
             type="button"
             className={tab === "account" ? "is-active" : undefined}

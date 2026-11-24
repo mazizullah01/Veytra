@@ -60,7 +60,7 @@ export default function CancelOrderButton({
     <div>
       <button type="button" className="btn btn--outline" disabled={busy} onClick={() => setOpen(true)}>
         <TrashIcon size={16} />
-        <span>{refund ? "Cancel and refund" : "Cancel Order"}</span>
+        <span>Cancel Order</span>
       </button>
       {error && !open && (
         <p className="field__error" role="alert">
