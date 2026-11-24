@@ -3,22 +3,25 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppLink from "./AppLink";
-import OrderConfirmationCard, { type ConfirmationItem } from "./OrderConfirmationCard";
+import { BagIcon } from "./Icons";
+import PaymentSuccessMark from "./PaymentSuccessMark";
 import { paymentRequest } from "./PaymentView";
 import { useAuth } from "@/lib/store";
 import { errorMessage } from "@/lib/insforge";
 import { money } from "@/lib/format";
-import { formatOrderNumber, paymentStatusLabel } from "@/lib/order-number";
+import {
+  formatOrderNumber,
+  orderStatusLabel,
+  paymentStatusLabel,
+} from "@/lib/order-number";
 
 interface Result {
   orderId: string;
   orderNumber?: string | null;
-  createdAt?: string | null;
   total?: number;
   stripePaid: boolean;
   paymentStatus: string;
   status: string;
-  items?: ConfirmationItem[];
 }
 
 export default function PaymentReturnView({ sessionId }: { sessionId: string }) {
@@ -63,9 +66,9 @@ export default function PaymentReturnView({ sessionId }: { sessionId: string }) 
 
   if (!result && !failure) {
     return (
-      <div className="order-confirm-page order-confirm-page--loading">
+      <div className="pay-success pay-success--loading">
         <div className="loader" />
-        <p>Confirming your payment…</p>
+        <p className="pay-success__copy">Confirming your payment…</p>
       </div>
     );
   }
@@ -75,54 +78,95 @@ export default function PaymentReturnView({ sessionId }: { sessionId: string }) 
 
   if (confirmed && result) {
     return (
-      <section className="order-confirm-page" aria-live="polite">
-        <OrderConfirmationCard
-          orderId={result.orderId}
-          orderNumber={result.orderNumber}
-          createdAt={result.createdAt}
-          total={Number(result.total ?? 0)}
-          status={result.status}
-          paymentStatus={result.paymentStatus}
-          items={result.items ?? []}
-          onCancelled={() => setRevision((value) => value + 1)}
-        />
-        <div className="order-confirm-page__actions">
-          <AppLink href="/profile" className="btn btn--solid">
-            <span>View My Orders</span>
-          </AppLink>
-          <AppLink href="/women" className="btn btn--outline">
-            <span>Continue Shopping</span>
-          </AppLink>
+      <section className="pay-success" aria-live="polite">
+        <div className="pay-success__decor pay-success__decor--tl" aria-hidden />
+        <div className="pay-success__decor pay-success__decor--br" aria-hidden />
+        <svg className="pay-success__leaf pay-success__leaf--l" viewBox="0 0 80 160" fill="none" aria-hidden>
+          <path d="M40 12c18 28 22 58 8 96-18 8-34-6-40-28 20-8 34-28 32-68Z" fill="#E8DFD2" opacity="0.55" />
+          <path d="M36 28c10 18 12 40 4 64" stroke="#D6CBB8" strokeWidth="1.2" opacity="0.7" />
+        </svg>
+        <svg className="pay-success__leaf pay-success__leaf--r" viewBox="0 0 80 160" fill="none" aria-hidden>
+          <path d="M40 12c-18 28-22 58-8 96 18 8 34-6 40-28-20-8-34-28-32-68Z" fill="#E8DFD2" opacity="0.55" />
+          <path d="M44 28c-10 18-12 40-4 64" stroke="#D6CBB8" strokeWidth="1.2" opacity="0.7" />
+        </svg>
+
+        <div className="pay-success__card">
+          <PaymentSuccessMark />
+          <h1 className="pay-success__title">Payment Successful!</h1>
+          <p className="pay-success__copy">Thank you for your order. Your payment has been received.</p>
+
+          <div className="pay-success__meta">
+            <div className="pay-success__meta-item">
+              <BagIcon size={16} />
+              <span>
+                Order <strong>{formatOrderNumber(result.orderNumber, result.orderId)}</strong>
+              </span>
+            </div>
+            <div className="pay-success__meta-item">
+              <span>
+                Total: <strong>{typeof result.total === "number" ? money(Number(result.total)) : "—"}</strong>
+              </span>
+            </div>
+            <div className="pay-success__meta-item">
+              <span>Status:</span>
+              <span className="pay-success__badge">{orderStatusLabel(result.status)}</span>
+            </div>
+          </div>
+
+          <div className="pay-success__actions">
+            <AppLink href={`/payment/${result.orderId}`} className="btn btn--solid pay-success__btn">
+              <span>View Order</span>
+            </AppLink>
+            <AppLink href="/women" className="btn btn--outline pay-success__btn">
+              <span>Continue Shopping</span>
+            </AppLink>
+          </div>
         </div>
       </section>
     );
   }
 
   return (
-    <div className="order-confirm-page order-confirm-page--alt">
-      <div className="order-confirm">
-        <h1 className="order-confirm__title">
+    <div className="pay-success pay-success--alt">
+      <div className="pay-success__card">
+        <h1 className="pay-success__title">
           {failure ? "Unable to check payment" : pending ? "Confirming your payment" : "Payment is not complete"}
         </h1>
         {result && (
           <>
-            <p className="order-confirm__meta" style={{ marginTop: "0.85rem" }}>
+            <p className="pay-success__copy">
               {pending
                 ? "Stripe received your payment. We’re confirming your order…"
                 : "Your payment has not completed. Your order will stay unpaid until Stripe confirms payment."}
             </p>
-            <p className="order-confirm__meta">
-              {formatOrderNumber(result.orderNumber, result.orderId)}
-              {typeof result.total === "number" ? ` · ${money(Number(result.total))}` : ""}
-              {` · ${paymentStatusLabel(result.paymentStatus)}`}
-            </p>
-            <div className="order-confirm-page__actions" style={{ marginTop: "1.5rem" }}>
+            <div className="pay-success__meta">
+              <div className="pay-success__meta-item">
+                <BagIcon size={16} />
+                <span>
+                  Order <strong>{formatOrderNumber(result.orderNumber, result.orderId)}</strong>
+                </span>
+              </div>
+              {typeof result.total === "number" && (
+                <div className="pay-success__meta-item">
+                  <span>
+                    Total: <strong>{money(Number(result.total))}</strong>
+                  </span>
+                </div>
+              )}
+              <div className="pay-success__meta-item">
+                <span>Status:</span>
+                <span className="pay-success__badge pay-success__badge--muted">
+                  {paymentStatusLabel(result.paymentStatus)}
+                </span>
+              </div>
+            </div>
+            <div className="pay-success__actions">
               {!result.stripePaid && (
-                <AppLink href={`/payment/${result.orderId}`} className="btn btn--solid">
+                <AppLink href={`/payment/${result.orderId}`} className="btn btn--solid pay-success__btn">
                   <span>Return to payment</span>
                 </AppLink>
               )}
-              <button type="button" className="btn btn--outline" onClick={() => setRevision((value) => value + 1)}>
+              <button type="button" className="btn btn--outline pay-success__btn" onClick={() => setRevision((v) => v + 1)}>
                 <span>Check payment again</span>
               </button>
             </div>
@@ -133,7 +177,7 @@ export default function PaymentReturnView({ sessionId }: { sessionId: string }) 
             {failure}
           </p>
         )}
-        <p style={{ marginTop: "1.25rem" }}>
+        <p className="pay-success__foot">
           <AppLink href="/profile" className="link-underline">
             View My Orders
           </AppLink>
