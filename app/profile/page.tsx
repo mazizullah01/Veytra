@@ -53,6 +53,7 @@ export default function ProfilePage() {
   const [tab, setTab] = useState<Tab>("orders");
   const [query, setQuery] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login?next=%2Fprofile");
@@ -114,6 +115,17 @@ export default function ProfilePage() {
     });
   }, [orders, query]);
 
+  const eligibleReturns = useMemo(() => orders.filter((order) => canRequestReturn(order)), [orders]);
+  const focusedReturns = returnOrderId
+    ? eligibleReturns.filter((order) => order.id === returnOrderId)
+    : eligibleReturns;
+  const visibleReturns = focusedReturns.length ? focusedReturns : eligibleReturns;
+
+  const closeReturn = () => {
+    setReturnOrderId(null);
+    setTab("orders");
+  };
+
   if (loading || !user) {
     return (
       <div className="section container" style={{ paddingBlock: "6rem" }}>
@@ -147,7 +159,10 @@ export default function ProfilePage() {
           <button
             type="button"
             className={tab === "returns" ? "is-active" : undefined}
-            onClick={() => setTab("returns")}
+            onClick={() => {
+              setReturnOrderId(null);
+              setTab("returns");
+            }}
           >
             <TrashIcon size={16} /> Returns & Refunds
           </button>
@@ -255,12 +270,16 @@ export default function ProfilePage() {
                       />
                     )}
                     {canRequestReturn(order) && (
-                      <ReturnRequestForm
-                        orderId={order.id}
-                        orderNumber={order.order_number}
-                        items={order.items}
-                        onDone={() => setRevision((value) => value + 1)}
-                      />
+                      <button
+                        type="button"
+                        className="btn btn--outline"
+                        onClick={() => {
+                          setReturnOrderId(order.id);
+                          setTab("returns");
+                        }}
+                      >
+                        <span>Request a return</span>
+                      </button>
                     )}
                   </div>
                 </article>
@@ -270,33 +289,26 @@ export default function ProfilePage() {
         )}
 
         {tab === "returns" && (
-          <section>
-            <h1>Returns & Refunds</h1>
-            <p className="muted" style={{ marginTop: "0.75rem" }}>
-              Open an eligible delivered order below to submit a return request.
-            </p>
-            <div style={{ marginTop: "1.5rem" }}>
-              {orders.filter((order) => canRequestReturn(order)).length === 0 ? (
-                <p className="muted">No eligible orders for return right now.</p>
-              ) : (
-                orders
-                  .filter((order) => canRequestReturn(order))
-                  .map((order) => (
-                    <article className="order-card" key={order.id}>
-                      <div className="order-card__head">
-                        <h3>{formatOrderNumber(order.order_number, order.id)}</h3>
-                        <span className={orderStatusClass(order.status)}>{orderStatusLabel(order.status)}</span>
-                      </div>
-                      <ReturnRequestForm
-                        orderId={order.id}
-                        orderNumber={order.order_number}
-                        items={order.items}
-                        onDone={() => setRevision((value) => value + 1)}
-                      />
-                    </article>
-                  ))
-              )}
-            </div>
+          <section className="return-request-page">
+            {visibleReturns.length === 0 ? (
+              <>
+                <h1>Returns & Refunds</h1>
+                <p className="muted" style={{ marginTop: "0.75rem" }}>
+                  No eligible orders for return right now.
+                </p>
+              </>
+            ) : (
+              visibleReturns.map((order) => (
+                <ReturnRequestForm
+                  key={order.id}
+                  orderId={order.id}
+                  orderNumber={order.order_number}
+                  items={order.items}
+                  onCancel={closeReturn}
+                  onDone={() => setRevision((value) => value + 1)}
+                />
+              ))
+            )}
           </section>
         )}
 
