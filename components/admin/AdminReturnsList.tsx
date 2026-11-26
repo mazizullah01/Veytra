@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import AppLink from "@/components/AppLink";
 import { adminFetch } from "@/lib/admin-client";
 import { RETURN_REASON_LABELS, type ReturnReason } from "@/lib/product-health";
@@ -29,6 +30,56 @@ function reasonLabel(reason: string) {
   return RETURN_REASON_LABELS[reason as ReturnReason] ?? reason;
 }
 
+function ReturnAcceptedDialog({ onClose }: { onClose: () => void }) {
+  const titleId = useId();
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mounted]);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="return-success">
+      <div className="return-success__dialog" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className="return-success__mark" aria-hidden="true">
+          <span className="return-success__badge">
+            <svg viewBox="0 0 52 52">
+              <path
+                className="return-success__check"
+                d="M14 27.5 22.5 36 38 18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+        </div>
+        <h2 id={titleId}>Return Request Accepted!</h2>
+        <p className="return-success__lead">This return request has been approved.</p>
+        <button ref={closeRef} type="button" className="return-success__continue" onClick={onClose}>
+          Done
+        </button>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 export default function AdminReturnsList() {
   const [returns, setReturns] = useState<ReturnRow[]>([]);
   const [items, setItems] = useState<ReturnItem[]>([]);
@@ -36,6 +87,7 @@ export default function AdminReturnsList() {
   const [pending, setPending] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
+  const [accepted, setAccepted] = useState(false);
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
@@ -81,6 +133,7 @@ export default function AdminReturnsList() {
         method: "PATCH",
         body: JSON.stringify({ id, status: next }),
       });
+      if (next === "approved") setAccepted(true);
       setRevision((value) => value + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Return update failed.");
@@ -189,6 +242,7 @@ export default function AdminReturnsList() {
           })}
         </ul>
       )}
+      {accepted && <ReturnAcceptedDialog onClose={() => setAccepted(false)} />}
     </div>
   );
 }

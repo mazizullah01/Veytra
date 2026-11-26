@@ -3,16 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppLink from "@/components/AppLink";
+import Img, { FALLBACK_IMAGE } from "@/components/Img";
 import OrderStatusTracker from "@/components/OrderStatusTracker";
 import CancelOrderButton from "@/components/CancelOrderButton";
 import ReturnRequestForm from "@/components/ReturnRequestForm";
 import {
+  BagIcon,
   HeartIcon,
-  OrdersIcon,
+  PackageIcon,
+  HomeIcon,
+  LogoutIcon,
+  RefreshIcon,
   SearchIcon,
   SettingsIcon,
   ShieldIcon,
-  TrashIcon,
   UserIcon,
 } from "@/components/Icons";
 import { adminFetch } from "@/lib/admin-client";
@@ -20,14 +24,8 @@ import { canCancelOrder, canRequestReturn } from "@/lib/order-actions";
 import { useAuth, useCart } from "@/lib/store";
 import { errorMessage } from "@/lib/insforge";
 import { authRequest, insforge } from "@/lib/insforge-client";
-import { money } from "@/lib/format";
-import {
-  formatOrderNumber,
-  orderStatusClass,
-  orderStatusLabel,
-  paymentStatusClass,
-  paymentStatusLabel,
-} from "@/lib/order-number";
+import { money, productImageSrc } from "@/lib/format";
+import { formatOrderNumber } from "@/lib/order-number";
 
 interface Order {
   id: string;
@@ -39,7 +37,29 @@ interface Order {
   items: { id: string; name: string; size: string; qty: number; price: number }[];
 }
 
-type Tab = "orders" | "returns" | "wishlist" | "account";
+type Tab = "dashboard" | "orders" | "returns" | "wishlist" | "account";
+
+function placedLabel(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Placed recently";
+  return `Placed on ${date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+}
+
+function orderPill(order: Order) {
+  if (order.payment_status === "refunded") return { label: "Refunded", tone: "refunded" };
+  if (order.status === "cancelled" || order.status === "canceled") return { label: "Cancelled", tone: "cancelled" };
+  if (order.payment_status === "unpaid") return { label: "Unpaid", tone: "unpaid" };
+  switch (order.status) {
+    case "delivered":
+      return { label: "Delivered", tone: "delivered" };
+    case "shipped":
+      return { label: "Shipped", tone: "shipped" };
+    case "confirmed":
+      return { label: "Confirmed", tone: "confirmed" };
+    default:
+      return { label: "Pending", tone: "pending" };
+  }
+}
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
@@ -54,6 +74,8 @@ export default function ProfilePage() {
   const [query, setQuery] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
+  const [openOrderId, setOpenOrderId] = useState<string | null>(null);
+  const [images, setImages] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login?next=%2Fprofile");
@@ -105,13 +127,40 @@ export default function ProfilePage() {
     }
   };
 
+  const imageKey = orders.flatMap((order) => order.items.map((item) => item.id)).join("|");
+
+  useEffect(() => {
+    let active = true;
+    const ids = [...new Set(imageKey.split("|").filter(Boolean))];
+    if (!ids.length) return;
+    void insforge.database
+      .from("products")
+      .select("id,images")
+      .in("id", ids)
+      .then(({ data }) => {
+        if (!active) return;
+        const next: Record<string, string> = {};
+        for (const row of (data as { id: string; images: unknown }[] | null) ?? []) {
+          const photos = Array.isArray(row.images) ? row.images : [];
+          const first = typeof photos[0] === "string" ? productImageSrc(photos[0]) : "";
+          if (first) next[row.id] = first;
+        }
+        setImages(next);
+      });
+    return () => {
+      active = false;
+    };
+  }, [imageKey]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return orders;
     return orders.filter((order) => {
       const ref = formatOrderNumber(order.order_number, order.id).toLowerCase();
       const names = order.items.map((item) => item.name.toLowerCase()).join(" ");
-      return ref.includes(q) || names.includes(q) || order.status.toLowerCase().includes(q);
+      const placed = placedLabel(order.created_at).toLowerCase();
+      const pill = orderPill(order).label.toLowerCase();
+      return ref.includes(q) || names.includes(q) || placed.includes(q) || pill.includes(q);
     });
   }, [orders, query]);
 
@@ -134,7 +183,8 @@ export default function ProfilePage() {
     );
   }
 
-  const displayName = user.email?.split("@")[0] || "Customer";
+  const profileName = [user.profile?.full_name, user.profile?.name].find((value) => typeof value === "string" && value.trim());
+  const displayName = typeof profileName === "string" ? profileName.trim() : user.email?.split("@")[0] || "Customer";
 
   return (
     <div className="container section account-layout">
@@ -151,10 +201,17 @@ export default function ProfilePage() {
         <nav className="account-nav__list">
           <button
             type="button"
+            className={tab === "dashboard" ? "is-active" : undefined}
+            onClick={() => setTab("dashboard")}
+          >
+            <HomeIcon size={16} /> Dashboard
+          </button>
+          <button
+            type="button"
             className={tab === "orders" ? "is-active" : undefined}
             onClick={() => setTab("orders")}
           >
-            <OrdersIcon size={16} /> Orders
+            <BagIcon size={16} /> Orders
           </button>
           <button
             type="button"
@@ -164,8 +221,13 @@ export default function ProfilePage() {
               setTab("returns");
             }}
           >
-            <TrashIcon size={16} /> Returns & Refunds
+            <RefreshIcon size={16} /> Returns & Refunds
           </button>
+          {isAdmin && (
+            <button type="button" onClick={() => router.push("/admin/returns")}>
+              <PackageIcon size={16} /> Returns
+            </button>
+          )}
           <button
             type="button"
             className={tab === "wishlist" ? "is-active" : undefined}
@@ -185,25 +247,40 @@ export default function ProfilePage() {
           >
             <SettingsIcon size={16} /> Account Settings
           </button>
+          <button type="button" className="account-nav__signout" disabled={busy} onClick={() => void signOut()}>
+            <LogoutIcon size={16} /> {busy ? "Signing out…" : "Sign Out"}
+          </button>
         </nav>
-        <button type="button" className="account-nav__signout" disabled={busy} onClick={() => void signOut()}>
-          {busy ? "Signing out…" : "Sign Out"}
-        </button>
       </aside>
 
       <div className="account-main">
+        {tab === "dashboard" && (
+          <section className="orders-page">
+            <div className="orders-head">
+              <div>
+                <h1>Dashboard</h1>
+                <p>Track, manage and view your orders.</p>
+              </div>
+            </div>
+            <p className="muted">{pending ? "Loading your orders…" : `${orders.length} order${orders.length === 1 ? "" : "s"}.`}</p>
+          </section>
+        )}
+
         {tab === "orders" && (
-          <section>
-            <div className="account-main__head">
-              <h1>My Orders</h1>
-              <label className="account-search">
-                <SearchIcon size={16} />
+          <section className="orders-page">
+            <div className="orders-head">
+              <div>
+                <h1>My Orders</h1>
+                <p>Track, manage and view your orders.</p>
+              </div>
+              <label className="orders-search">
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search orders"
-                  aria-label="Search orders"
+                  placeholder="Search by order ID, product or date..."
+                  aria-label="Search by order ID, product or date"
                 />
+                <SearchIcon size={16} />
               </label>
             </div>
             {error && (
@@ -221,69 +298,85 @@ export default function ProfilePage() {
                 </AppLink>
               </div>
             ) : (
-              filtered.map((order) => (
-                <article className="order-card" key={order.id}>
-                  <div className="order-card__head">
-                    <div>
-                      <h3>{formatOrderNumber(order.order_number, order.id)}</h3>
-                      <div className="order-card__meta">
-                        <time dateTime={order.created_at}>{new Date(order.created_at).toLocaleDateString()}</time>
-                        <span>{money(Number(order.total))}</span>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }}>
-                      <span className={paymentStatusClass(order.payment_status)}>
-                        {paymentStatusLabel(order.payment_status)}
-                      </span>
-                      <span className={orderStatusClass(order.status)}>{orderStatusLabel(order.status)}</span>
-                    </div>
-                  </div>
-
-                  {order.items.map((item, index) => (
-                    <div className="order-card__line" key={`${item.id}-${item.size}-${index}`}>
-                      <span>
-                        {item.name}
-                        <br />
-                        <small className="muted">
-                          Size {item.size} · Qty {item.qty}
-                        </small>
-                      </span>
-                      <span>{money(Number(item.price) * item.qty)}</span>
-                    </div>
-                  ))}
-
-                  <OrderStatusTracker status={order.status} />
-
-                  <div className="order-actions">
-                    {order.payment_status === "unpaid" && order.status === "pending" && (
-                      <AppLink href={`/payment/${order.id}`} className="btn btn--solid btn--sm">
-                        <span>Continue to payment</span>
-                      </AppLink>
-                    )}
-                    {canCancelOrder(order) && (
-                      <CancelOrderButton
-                        orderId={order.id}
-                        orderNumber={order.order_number}
-                        refund={order.payment_status === "paid"}
-                        refundAmount={Number(order.total)}
-                        onDone={() => setRevision((value) => value + 1)}
-                      />
-                    )}
-                    {canRequestReturn(order) && (
+              <div className="order-list">
+                {filtered.map((order) => {
+                  const open = openOrderId === order.id;
+                  const pill = orderPill(order);
+                  const ref = formatOrderNumber(order.order_number, order.id);
+                  const orderLabel = ref.startsWith("Order ") ? ref : `Order ${ref}`;
+                  const thumb = images[order.items[0]?.id] || FALLBACK_IMAGE;
+                  return (
+                    <article className={`order-row${open ? " is-open" : ""}`} key={order.id}>
                       <button
                         type="button"
-                        className="btn btn--outline"
-                        onClick={() => {
-                          setReturnOrderId(order.id);
-                          setTab("returns");
-                        }}
+                        className="order-row__main"
+                        aria-expanded={open}
+                        onClick={() => setOpenOrderId(open ? null : order.id)}
                       >
-                        <span>Request a return</span>
+                        <span className="order-row__thumb">
+                          <Img src={thumb} alt="" fill sizes="64px" />
+                        </span>
+                        <span className="order-row__copy">
+                          <strong>{orderLabel}</strong>
+                          <time dateTime={order.created_at}>{placedLabel(order.created_at)}</time>
+                        </span>
+                        <span className={`order-pill order-pill--${pill.tone}`}>{pill.label}</span>
+                        <span className="order-row__total">{money(Number(order.total))}</span>
+                        <span className="order-row__chevron" aria-hidden>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="m9 6 6 6-6 6" />
+                          </svg>
+                        </span>
                       </button>
-                    )}
-                  </div>
-                </article>
-              ))
+                      {open && (
+                        <div className="order-row__detail">
+                          {order.items.map((item, index) => (
+                            <div className="order-card__line" key={`${item.id}-${item.size}-${index}`}>
+                              <span>
+                                {item.name}
+                                <br />
+                                <small className="muted">
+                                  Size {item.size} · Qty {item.qty}
+                                </small>
+                              </span>
+                              <span>{money(Number(item.price) * item.qty)}</span>
+                            </div>
+                          ))}
+                          <OrderStatusTracker status={order.status} />
+                          <div className="order-actions">
+                            {order.payment_status === "unpaid" && order.status === "pending" && (
+                              <AppLink href={`/payment/${order.id}`} className="btn btn--solid btn--sm">
+                                <span>Continue to payment</span>
+                              </AppLink>
+                            )}
+                            {canCancelOrder(order) && (
+                              <CancelOrderButton
+                                orderId={order.id}
+                                orderNumber={order.order_number}
+                                refund={order.payment_status === "paid"}
+                                refundAmount={Number(order.total)}
+                                onDone={() => setRevision((value) => value + 1)}
+                              />
+                            )}
+                            {canRequestReturn(order) && (
+                              <button
+                                type="button"
+                                className="btn btn--outline"
+                                onClick={() => {
+                                  setReturnOrderId(order.id);
+                                  setTab("returns");
+                                }}
+                              >
+                                <span>Request a return</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
             )}
           </section>
         )}

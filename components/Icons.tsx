@@ -154,6 +154,21 @@ export const SendIcon = (p: IconProps) => (
   </svg>
 );
 
+export const HomeIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 10.5 12 4l8 6.5" />
+    <path d="M6 10v9h12v-9" />
+  </svg>
+);
+
+export const LogoutIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M9 6V4H4v16h5v-2" />
+    <path d="M10 12h10" />
+    <path d="m16 8 4 4-4 4" />
+  </svg>
+);
+
 export const OrdersIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M7 4h10v16H7z" />

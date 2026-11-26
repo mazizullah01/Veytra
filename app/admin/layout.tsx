@@ -55,7 +55,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </AppLink>
           <nav className="admin-shell__nav" aria-label="Admin">
             <AppLink href="/admin/product-health">Product Health</AppLink>
-            <AppLink href="/admin/returns">Returns</AppLink>
             <AppLink href="/">Storefront</AppLink>
           </nav>
         </div>

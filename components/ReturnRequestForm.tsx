@@ -74,7 +74,7 @@ function ReturnSubmittedDialog({ onContinue }: { onContinue: () => void }) {
         <h2 id={titleId}>Return Request Submitted!</h2>
         <p className="return-success__lead">Your return request has been successfully submitted.</p>
         <p className="return-success__refund">
-          Your refund will be credited to your original payment method after the return is approved.
+        Your refund will be credited to your original payment method within 7 days of return approval.
         </p>
         <p className="return-success__thanks">Thank you for shopping with VEYTRA.</p>
         <button ref={continueRef} type="button" className="return-success__continue" onClick={onContinue}>
